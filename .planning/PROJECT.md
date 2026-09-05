@@ -27,6 +27,7 @@ write-a-caption-and-vote in Hebrew without anyone getting stuck, disconnected, o
 - [ ] 10+ players can join a room by entering the code and a display name — no signup, no password
 - [ ] Host chooses how many rounds the game runs before starting
 - [ ] Each round shows every player a photo of Tamir and a Hebrew text box to write a caption
+- [ ] A player can swap their photo once per round before submitting a caption
 - [ ] All submitted captions for the round are shown to every player for voting
 - [ ] Players vote for the funniest caption (cannot vote for their own)
 - [ ] Points are awarded per round and a running scoreboard is shown
