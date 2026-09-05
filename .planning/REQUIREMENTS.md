@@ -26,18 +26,19 @@ Requirements for the party night. Each maps to a roadmap phase.
 - [ ] **ROUND-04**: The server owns the countdown and advances the round when time expires, regardless of who has submitted
 - [ ] **ROUND-05**: Players see submission progress only (e.g. "8 of 12 submitted") — never other players' captions before the round closes
 
-### Voting
+### Rating
 
-- [ ] **VOTE-01**: After the writing phase, every player sees all the memes from that round and votes for the funniest
-- [ ] **VOTE-02**: A player cannot vote for their own meme
-- [ ] **VOTE-03**: Vote counts stay hidden until voting closes, so nobody can copy the leader
-- [ ] **VOTE-04**: Voting has a server-owned countdown and closes on time regardless of who has voted
-- [ ] **VOTE-05**: Round results screen shows each meme with the votes it received
+- [ ] **VOTE-01**: After the writing phase, the round's memes are revealed one at a time, the same meme on every player's screen at once
+- [ ] **VOTE-02**: Every player rates the meme currently on screen on a three-point scale — 3 (funniest), 2 (fine), 1 (meh). The three tiers get funny Hebrew names, decided during phase planning
+- [ ] **VOTE-03**: A player cannot rate their own meme and sees a waiting state while their meme is on screen
+- [ ] **VOTE-04**: Each meme's rating step has a server-owned countdown and advances on time regardless of who has rated
+- [ ] **VOTE-05**: Individual ratings stay hidden while a meme is being rated; that meme's total is revealed only once its step closes
+- [ ] **VOTE-06**: A round results screen ranks all of the round's memes by total points
 
 ### Scoring
 
-- [ ] **SCORE-01**: A player earns points for each vote their meme receives
-- [ ] **SCORE-02**: A player earns bonus points for voting for the round's winning meme
+- [ ] **SCORE-01**: A player's score for a round is the sum of the ratings their meme received from all other players
+- [ ] **SCORE-02**: Round scores accumulate into a running total across the whole game
 - [ ] **SCORE-03**: A running scoreboard is shown between rounds
 - [ ] **SCORE-04**: A final winner screen is shown at the end of the game
 
@@ -102,9 +103,10 @@ Explicitly excluded, with reasons, to prevent scope creep during a one-week buil
 | Multiple game modes | One loop built well beats three built badly in a week |
 | Persistent history of past games | Memes are downloaded on the night; nothing needs to outlive the party |
 | Any language other than Hebrew | Every player speaks Hebrew; translation is pure cost |
+| A bonus for rating with the crowd | Considered and dropped — points come only from the ratings your own meme receives |
 | A database | State lives in memory for a single-room, single-night event |
 | Copying makeitmeme.com's code, artwork, fonts or branding | Original implementation and assets only; only the general game format is shared |
-| Live vote tallies during open voting | Everyone can see each other's phones; visible tallies would cause copycat voting |
+| Showing ratings while a meme is still being rated | Everyone can see each other's phones; visible tallies would cause copycat rating |
 
 ## Traceability
 
@@ -112,13 +114,51 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (to be filled by roadmap) | | |
+| LOBBY-01 | Phase 1 | Pending |
+| LOBBY-02 | Phase 1 | Pending |
+| LOBBY-03 | Phase 1 | Pending |
+| LOBBY-04 | Phase 1 | Pending |
+| LOBBY-05 | Phase 1 | Pending |
+| LOBBY-06 | Phase 2 | Pending |
+| LOBBY-07 | Phase 2 | Pending |
+| ROUND-01 | Phase 3 | Pending |
+| ROUND-02 | Phase 4 | Pending |
+| ROUND-03 | Phase 3 | Pending |
+| ROUND-04 | Phase 2 | Pending |
+| ROUND-05 | Phase 2 | Pending |
+| ROUND-06 | Phase 4 | Pending |
+| VOTE-01 | Phase 3 | Pending |
+| VOTE-02 | Phase 3 | Pending |
+| VOTE-03 | Phase 4 | Pending |
+| VOTE-04 | Phase 2 | Pending |
+| VOTE-05 | Phase 4 | Pending |
+| SCORE-01 | Phase 3 | Pending |
+| SCORE-02 | Phase 4 | Pending |
+| SCORE-03 | Phase 3 | Pending |
+| SCORE-04 | Phase 4 | Pending |
+| MEME-01 | Phase 5 | Pending |
+| MEME-02 | Phase 4 | Pending |
+| MEME-03 | Phase 5 | Pending |
+| HEB-01 | Phase 6 | Pending |
+| HEB-02 | Phase 6 | Pending |
+| HEB-03 | Phase 5 | Pending |
+| LIVE-01 | Phase 8 | Pending |
+| LIVE-02 | Phase 1 | Pending |
+| LIVE-03 | Phase 2 | Pending |
+| LIVE-04 | Phase 6 | Pending |
+| LIVE-05 | Phase 6 | Pending |
+| LIVE-06 | Phase 6 | Pending |
+| LIVE-07 | Phase 6 | Pending |
+| DEPLOY-01 | Phase 7 | Pending |
+| DEPLOY-02 | Phase 7 | Pending |
+| DEPLOY-03 | Phase 9 | Pending |
+| DEPLOY-04 | Phase 8 | Pending |
 
 **Coverage:**
-- v1 requirements: 39 total
-- Mapped to phases: 0
-- Unmapped: 39 ⚠️
+- v1 requirements: 40 total
+- Mapped to phases: 39
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-09-05*
-*Last updated: 2026-09-05 after initial definition*
+*Last updated: 2026-09-05 after roadmap creation (39/39 requirements mapped across 9 phases)*
