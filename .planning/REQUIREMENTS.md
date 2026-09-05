@@ -132,6 +132,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | VOTE-03 | Phase 4 | Pending |
 | VOTE-04 | Phase 2 | Pending |
 | VOTE-05 | Phase 4 | Pending |
+| VOTE-06 | Phase 4 | Pending |
 | SCORE-01 | Phase 3 | Pending |
 | SCORE-02 | Phase 4 | Pending |
 | SCORE-03 | Phase 3 | Pending |
@@ -156,9 +157,9 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 **Coverage:**
 - v1 requirements: 40 total
-- Mapped to phases: 39
+- Mapped to phases: 40
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-09-05*
-*Last updated: 2026-09-05 after roadmap creation (39/39 requirements mapped across 9 phases)*
+*Last updated: 2026-09-05 after roadmap revision (voting/scoring mechanic changed to one-at-a-time per-meme rating, bonus dropped; VOTE-06 added and mapped to Phase 4; 40/40 requirements mapped across 9 phases)*

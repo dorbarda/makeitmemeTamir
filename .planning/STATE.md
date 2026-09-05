@@ -23,7 +23,7 @@ See: .planning/PROJECT.md (updated 2026-09-05)
 Phase: 1 of 9 (Room, Session & Reconnect Foundation)
 Plan: 0 of TBD in current phase
 Status: Ready to plan
-Last activity: 2026-09-05 — Roadmap created from requirements + research; 9 phases, 39/39 requirements mapped
+Last activity: 2026-09-05 — Roadmap revised: voting/scoring mechanic changed to one-at-a-time per-meme rating (3/2/1 scale, no bonus); VOTE-06 mapped to Phase 4; 40/40 requirements mapped across 9 phases
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -60,10 +60,24 @@ Recent decisions affecting current work:
   and is a go/no-go gate for the downloadable-meme requirement.
 - Roadmap: DEPLOY-03 (small real-phone rehearsal) and DEPLOY-04 (scripted load test) kept as two
   separate phases (8 and 9) per explicit instruction not to merge them into one rehearsal.
+- Roadmap revision (2026-09-05): the voting mechanic was replaced mid-flight with one-at-a-time
+  meme rating — a round's memes are revealed one at a time, same meme on every screen at once,
+  and every player (except the author, who sees a waiting state) rates it 3 (funniest) / 2 (fine) /
+  1 (meh), with funny Hebrew tier names still to be decided. Each meme's rating step has its own
+  server-owned countdown (VOTE-04 now per-meme rather than per-voting-phase); individual ratings
+  stay hidden until that meme's step closes. The vote-for-the-winner bonus is dropped entirely —
+  a round score is only the sum of ratings a player's own meme receives. Added VOTE-06 (round
+  results screen ranks the round's memes by total points), mapped to Phase 4. Phase structure,
+  ordering, and all other requirement mappings are unchanged; only the wording and scope of
+  Phases 2, 3, and 4 were corrected to match.
 
 ### Pending Todos
 
-None yet.
+- Phase 3/4 planning: choose funny Hebrew names for the three rating tiers (3 = funniest, 2 = fine,
+  1 = meh) together with the user.
+- Phase 3/4 planning: deliberately size each meme's rating-step duration. With ~12 players there
+  are ~12 sequential rating steps per round, each with its own timer — total round time, not
+  per-step correctness, is the real risk of a round dragging on too long.
 
 ### Blockers/Concerns
 
@@ -87,6 +101,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 ## Session Continuity
 
 Last session: 2026-09-05
-Stopped at: ROADMAP.md and STATE.md created; REQUIREMENTS.md traceability table updated
+Stopped at: ROADMAP.md and STATE.md revised for the one-at-a-time rating mechanic (bonus dropped,
+VOTE-06 added); REQUIREMENTS.md traceability table updated to 40/40 requirements mapped
 Resume file: None
-</content>
