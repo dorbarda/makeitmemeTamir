@@ -37,10 +37,10 @@ function clampCaptionForInput(value: string): string {
 }
 
 /**
- * The writing phase's own screen: a numbered placeholder panel (Phase 3
- * swaps in the real photo), a caption box and send button before
- * submitting, and — once the server confirms the submission — the
- * submitted note plus the room's fill progress (D-13). No optimistic state:
+ * The writing phase's own screen: the player's own real assigned photo of
+ * Tamir (D-01), a caption box and send button before submitting, and — once
+ * the server confirms the submission — the submitted note plus the room's
+ * fill progress (D-13). No optimistic state:
  * this panel only flips to the submitted view once the next snapshot says
  * `youSubmitted` — the server is the sole authority, exactly like
  * `Lobby.tsx`'s `handleRename` round-trip. Nothing here ever renders another
@@ -78,9 +78,9 @@ export function WritingPanel({ snapshot }: WritingPanelProps) {
 
   return (
     <section className="writing-panel">
-      <p>
-        {HEBREW_UI.placeholderContentPrefix} {snapshot.yourPlaceholderId}
-      </p>
+      {snapshot.yourPhotoUrl && (
+        <img className="meme-photo" src={snapshot.yourPhotoUrl} alt={HEBREW_UI.photoAlt} />
+      )}
 
       {snapshot.youSubmitted ? (
         <>

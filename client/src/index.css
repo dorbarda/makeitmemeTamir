@@ -275,3 +275,41 @@ li {
   overflow-wrap: break-word;
 }
 
+/* D-01 — the player's own photo during WRITING, and the current meme's photo
+   during RATING. Relative width + max-width, never a fixed pixel size —
+   mirrors .qr-code's established pattern for an element that overflowed a
+   phone viewport before. */
+.meme-photo {
+  display: block;
+  width: 100%;
+  max-width: 24rem;
+  height: auto;
+  margin: 0 auto 0.75rem;
+  border-radius: 0.5rem;
+}
+
+/* D-03 — the between-rounds scoreboard. Mobile-first, no fixed widths, same
+   shape as .round-end-panel. */
+.scoreboard {
+  margin: 1.25rem 0 0;
+}
+
+.scoreboard-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.scoreboard-entry {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid currentColor;
+  border-radius: 0.5rem;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+

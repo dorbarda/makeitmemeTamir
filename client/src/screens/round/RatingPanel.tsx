@@ -14,9 +14,9 @@ type RatingPanelProps = {
 };
 
 const TIER_LABELS: Record<RatingValue, string> = {
-  1: HEBREW_UI.ratingTierPlaceholder1,
-  2: HEBREW_UI.ratingTierPlaceholder2,
-  3: HEBREW_UI.ratingTierPlaceholder3,
+  1: HEBREW_UI.ratingTierMeh,
+  2: HEBREW_UI.ratingTierFine,
+  3: HEBREW_UI.ratingTierFunniest,
 };
 
 /**
@@ -65,9 +65,7 @@ export function RatingPanel({ snapshot }: RatingPanelProps) {
         {ratingStep.index + 1} {HEBREW_UI.ofSeparator} {ratingStep.total}
       </p>
 
-      <p>
-        {HEBREW_UI.placeholderContentPrefix} {ratingStep.placeholderId}
-      </p>
+      <img className="meme-photo" src={ratingStep.photoUrl} alt={HEBREW_UI.photoAlt} />
       <p>{ratingStep.caption}</p>
 
       {ratingStep.youAreAuthor ? (

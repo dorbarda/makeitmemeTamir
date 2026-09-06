@@ -51,7 +51,7 @@ export type RatingStepView = {
   index: number;
   total: number;
   caption: string;
-  placeholderId: number;
+  photoUrl: string;
   youAreAuthor: boolean;
   youMayRate: boolean;
   youHaveRated: boolean;
@@ -95,7 +95,7 @@ export type LobbySnapshot = {
   round: RoundView | null; // null only in LOBBY
   progress: SubmissionProgress | null; // filled by plan 02-03
   youSubmitted: boolean; // filled by plan 02-03
-  yourPlaceholderId: number | null; // filled by plan 02-03
+  yourPhotoUrl: string | null; // filled by plan 03-01 — this player's own assigned photo (D-01)
   ratingStep: RatingStepView | null; // filled by plan 02-04
   roundEnd: RoundEndView | null; // filled by plan 02-05
 };

@@ -28,6 +28,7 @@ import {
   WRITING_SECONDS_PRESETS,
 } from "../config.js";
 import { defaultSettings, isPresetValue } from "./gameSettings.js";
+import { assignPhotos, photoUrl } from "./photos.js";
 import { buildRotation, eligibleRaters } from "./rotation.js";
 import { normalizeForCompare } from "../names/nameValidation.js";
 import type { Player } from "../players/Player.js";
@@ -114,6 +115,10 @@ export class Room {
    * step closed. Recorded so Phase 4 can choose between a sum and an average
    * without a rework (D-10's flag). */
   eligibleAtClose = new Map<number, number>();
+  /** playerId -> this round's assigned photo filename (D-01). Rebuilt every
+   * `enterWriting()` via `assignPhotos`; a player who joins after that has
+   * already run gets a lazy fallback draw via `photoUrlFor`. */
+  photoAssignments = new Map<string, string>();
 
   /**
    * Invoked whenever a delayed internal timer (a roster fade, and later a
@@ -476,9 +481,49 @@ export class Room {
     this.stepIndex = -1;
     this.ratings.clear();
     this.eligibleAtClose.clear();
+    this.photoAssignments = assignPhotos([...this.players.keys()]);
     this.schedulePhase(Date.now() + this.settings.writingSeconds * 1000, () =>
       this.closeWriting(),
     );
+  }
+
+  /**
+   * D-01 — this round's photo for `playerId`, drawn from `photoAssignments`.
+   * A player who joins after this round's `enterWriting()` already ran has
+   * no entry there (nothing today prevents a mid-round join); this lazily
+   * draws one, caches it, and returns it either way, so `snapshotFor` never
+   * has to render an empty `<img src>` for anyone currently in WRITING or
+   * RATING.
+   */
+  private photoUrlFor(playerId: string): string {
+    let filename = this.photoAssignments.get(playerId);
+    if (!filename) {
+      filename = assignPhotos([playerId]).get(playerId)!;
+      this.photoAssignments.set(playerId, filename);
+    }
+    return photoUrl(filename);
+  }
+
+  /**
+   * SCORE-01 — the only place `Player.score` is ever mutated. Iterates
+   * `this.rotation` by index, sums each step's raw rating values, and adds
+   * the total onto that step's author. Called as the very first line of
+   * `enterRoundEnd()`, before `phase` changes to `ROUND_END`. A round skipped
+   * for too few captions (D-09) has an empty `rotation`, so this is a no-op
+   * for that round — no score is invented. No socket handler in
+   * `server/src/socket/handlers.ts` ever assigns to `.score`, so no client
+   * message can influence it.
+   */
+  private applyRoundScores(): void {
+    this.rotation.forEach((authorId, index) => {
+      const stepRatings = this.ratings.get(index);
+      if (!stepRatings) return;
+      const total = [...stepRatings.values()].reduce((sum, value) => sum + value, 0);
+      const author = this.players.get(authorId);
+      if (author) {
+        author.score += total;
+      }
+    });
   }
 
   /**
@@ -618,6 +663,7 @@ export class Room {
    * names the next phase, matching `transferHost()`'s no-arguments rule.
    */
   private enterRoundEnd(): void {
+    this.applyRoundScores();
     this.phase = "ROUND_END";
     this.schedulePhase(Date.now() + BETWEEN_PHASES_MS, () => {
       if (this.roundIndex < this.settings.rounds) {
@@ -719,7 +765,6 @@ export class Room {
     let ratingStep: RatingStepView | null = null;
     if (this.phase === "RATING") {
       const authorId = this.rotation[this.stepIndex];
-      const author = this.players.get(authorId);
       const stepRatings = this.ratings.get(this.stepIndex);
       const eligible = eligibleRaters(this.players, authorId);
       const youHaveRated = stepRatings?.has(playerId) ?? false;
@@ -728,7 +773,7 @@ export class Room {
         index: this.stepIndex,
         total: this.rotation.length,
         caption: this.submissions.get(authorId) ?? "",
-        placeholderId: author ? author.joinedAt + 1 : 0,
+        photoUrl: this.photoUrlFor(authorId),
         youAreAuthor: playerId === authorId,
         youMayRate: eligible.includes(playerId) && !youHaveRated,
         youHaveRated,
@@ -757,9 +802,9 @@ export class Room {
       round: this.phase === "LOBBY" ? null : { index: this.roundIndex, total: this.settings.rounds },
       progress,
       youSubmitted: inWriting && this.submissions.has(playerId),
-      // A trivial numbered placeholder, not a real photo — Phase 3 replaces
-      // this with the player's actual assigned image.
-      yourPlaceholderId: inWriting && you ? you.joinedAt + 1 : null,
+      // D-01 — this player's own assigned photo for the round, never a
+      // placeholder.
+      yourPhotoUrl: inWriting && you ? this.photoUrlFor(playerId) : null,
       ratingStep,
       // T-02-20 — populated only for ROUND_END and GAME_END, so the full
       // caption/rating set for the round never travels early (D-14's
