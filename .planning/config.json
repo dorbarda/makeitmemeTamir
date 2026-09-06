@@ -1,5 +1,5 @@
 {
-  "model_profile": "balanced",
+  "model_profile": "budget",
   "commit_docs": true,
   "parallelization": true,
   "search_gitignored": false,
@@ -19,7 +19,7 @@
   },
   "workflow": {
     "research": true,
-    "plan_check": true,
+    "plan_check": false,
     "verifier": true,
     "nyquist_validation": true,
     "auto_advance": false,
