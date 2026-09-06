@@ -1,5 +1,5 @@
 import type { Server, Socket } from "socket.io";
-import { CLIENT_EVENTS, SERVER_EVENTS, type ProtocolError } from "@shared/protocol.js";
+import { CLIENT_EVENTS, SERVER_EVENTS, type ProtocolError, type SettingKey } from "@shared/protocol.js";
 import { HEBREW_ERRORS } from "@shared/messages.js";
 import { RATE_LIMIT_MAX_INTENTS, RATE_LIMIT_WINDOW_MS } from "../config.js";
 import { MAX_NAME_GRAPHEMES, sanitizeName, truncateToGraphemes } from "../names/nameValidation.js";
@@ -135,6 +135,30 @@ export function registerHandlers(io: Server, socket: Socket, deps: HandlerDeps):
 
     const preparedName = prepareName(name);
     const result = room.renamePlayer(data.playerId, preparedName);
+    if (!result.ok) {
+      emitError(socket, { code: result.error, messageHe: HEBREW_ERRORS[result.error] });
+      return;
+    }
+
+    room.broadcast(io);
+  });
+
+  socket.on(CLIENT_EVENTS.changeSettings, ({ key, value }: { key: SettingKey; value: number }) => {
+    if (!data.playerId || !data.roomCode) {
+      emitError(socket, { code: "NOT_IN_ROOM", messageHe: HEBREW_ERRORS.NOT_IN_ROOM });
+      return;
+    }
+
+    const room = roomManager.findRoom(data.roomCode);
+    if (!room) {
+      emitError(socket, { code: "ROOM_NOT_FOUND", messageHe: HEBREW_ERRORS.ROOM_NOT_FOUND });
+      return;
+    }
+
+    // key/value are passed through exactly as received — validation lives in
+    // one place (Room.changeSetting -> isPresetValue), never pre-checked or
+    // coerced here, so that single place is the real gate (T-02-03).
+    const result = room.changeSetting(data.playerId, key, value);
     if (!result.ok) {
       emitError(socket, { code: result.error, messageHe: HEBREW_ERRORS[result.error] });
       return;

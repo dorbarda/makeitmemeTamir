@@ -10,9 +10,6 @@ import {
 } from "@shared/protocol.js";
 import {
   BETWEEN_PHASES_MS,
-  DEFAULT_RATING_SECONDS,
-  DEFAULT_ROUND_COUNT,
-  DEFAULT_WRITING_SECONDS,
   HOST_TRANSFER_GRACE_MS,
   MIN_PLAYERS_TO_START,
   RATING_SECONDS_PRESETS,
@@ -21,6 +18,7 @@ import {
   ROUND_COUNT_PRESETS,
   WRITING_SECONDS_PRESETS,
 } from "../config.js";
+import { defaultSettings, isPresetValue } from "./gameSettings.js";
 import { normalizeForCompare } from "../names/nameValidation.js";
 import type { Player } from "../players/Player.js";
 
@@ -33,6 +31,12 @@ export type RenameOutcome =
 export type StartGameOutcome =
   | { ok: true }
   | { ok: false; error: "NOT_HOST" | "WRONG_PHASE" | "NOT_ENOUGH_PLAYERS" };
+
+/** Result of a change-settings attempt — never throws, always tells the
+ * caller why. Shaped exactly like RenameOutcome/StartGameOutcome. */
+export type ChangeSettingOutcome =
+  | { ok: true; settings: GameSettings }
+  | { ok: false; error: "NOT_HOST" | "SETTINGS_LOCKED" | "SETTINGS_INVALID" };
 
 export class Room {
   readonly code: string;
@@ -48,11 +52,7 @@ export class Room {
    * pre-game via `change-settings` (plan 02-02), locked the moment the game
    * starts. Every round transition reads this, never a DEFAULT_* constant
    * directly, so a host who changed a setting is never silently ignored. */
-  settings: GameSettings = {
-    rounds: DEFAULT_ROUND_COUNT,
-    writingSeconds: DEFAULT_WRITING_SECONDS,
-    ratingSeconds: DEFAULT_RATING_SECONDS,
-  };
+  settings: GameSettings = defaultSettings();
   /** D-05 — true from the moment the game starts; settings are immutable
    * after that for the lifetime of the room. */
   settingsLocked = false;
@@ -298,6 +298,32 @@ export class Room {
       clearTimeout(this.phaseTimer);
       this.phaseTimer = null;
     }
+  }
+
+  /**
+   * Changes one game setting (D-01/D-02). Host-only (T-02-02), refused once
+   * settings are locked or the room has left LOBBY (D-05/T-02-12), and
+   * refused for any value that is not one of that key's exact presets
+   * (T-02-03) — never a range check, never a client-supplied object spread.
+   * Order of refusal: identity first, then lock state, then value validity —
+   * matching this method's own doc order and the plan's stated precedence.
+   */
+  changeSetting(playerId: string, key: string, value: unknown): ChangeSettingOutcome {
+    if (playerId !== this.hostId) {
+      return { ok: false, error: "NOT_HOST" };
+    }
+    if (this.settingsLocked || this.phase !== "LOBBY") {
+      return { ok: false, error: "SETTINGS_LOCKED" };
+    }
+    if (!isPresetValue(key, value)) {
+      return { ok: false, error: "SETTINGS_INVALID" };
+    }
+
+    // isPresetValue narrows `key` to SettingKey and already proved `value` is
+    // an integer member of that key's own preset array — the cast reflects
+    // what was just verified, not an unchecked assumption.
+    this.settings[key] = value as number;
+    return { ok: true, settings: this.settings };
   }
 
   /**
