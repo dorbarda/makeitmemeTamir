@@ -1,6 +1,14 @@
+/* Mobile-first, right-to-left. Every screen in this app is read on a phone held
+   in one hand, so the base styles target a narrow viewport and nothing here
+   assumes a wide one. */
+
 :root {
   font-family: system-ui, sans-serif;
   color-scheme: light dark;
+  /* 16px is the floor for form fields: below it, iOS Safari zooms the page in
+     when a field takes focus and the player has to pinch back out mid-game. */
+  font-size: 16px;
+  line-height: 1.5;
 }
 
 * {
@@ -10,4 +18,124 @@
 body {
   margin: 0;
   min-height: 100vh;
+  /* Nothing should ever be reachable only by scrolling sideways. */
+  overflow-x: hidden;
+}
+
+main {
+  /* The padding is what stopped the Hebrew title and the field label from
+     being clipped against the right edge of the screen. */
+  padding: 1.25rem 1rem 2rem;
+  max-width: 32rem;
+  margin-inline: auto;
+}
+
+h1 {
+  /* Scales with the viewport instead of overflowing a narrow one. */
+  font-size: clamp(1.5rem, 7vw, 2rem);
+  margin: 0 0 1.25rem;
+  /* Long Hebrew words break rather than push the layout wider than the screen. */
+  overflow-wrap: break-word;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+label {
+  /* Previously the label text and its input sat side by side on one row, which
+     was wider than a phone screen. Stacking them is the actual fix. */
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+input,
+button {
+  font: inherit;
+  width: 100%;
+  /* 44px is the smallest comfortably tappable target on a phone. */
+  min-height: 2.75rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.5rem;
+}
+
+input {
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+}
+
+button {
+  border: 0;
+  background: #1f6feb;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+li {
+  padding: 0.75rem 0.875rem;
+  border: 1px solid currentColor;
+  border-radius: 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+/* The room code needs to be readable at arm's length across a loud room —
+   large, bold, and centered, but still just digits so no letter-spacing is
+   needed (letter-spacing is reserved against Hebrew text elsewhere, per
+   project convention). */
+.room-code {
+  font-size: clamp(2.5rem, 16vw, 4rem);
+  font-weight: 700;
+  text-align: center;
+  margin: 0 0 1rem;
+}
+
+/* Relative width + max-width, never a fixed pixel size — this is exactly the
+   kind of element that overflowed a phone viewport before (see plan 01-01's
+   carried-forward lesson). */
+.qr-code {
+  display: block;
+  width: 60%;
+  max-width: 14rem;
+  height: auto;
+  margin: 0 auto 0.5rem;
+}
+
+.player--disconnected {
+  opacity: 0.55;
+}
+
+/* Overlays the current screen without unmounting it (D-14) — a fixed banner
+   near the top of the viewport, relative width and capped so it never
+   overflows a narrow phone, and never blocking taps on whatever is
+   underneath once the player can see through it again. */
+.reconnect-overlay {
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  z-index: 10;
+  padding: 0.625rem 1rem;
+  text-align: center;
+  font-weight: 600;
+  background: #1f2937;
+  color: #fff;
 }
