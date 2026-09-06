@@ -139,3 +139,22 @@ li {
   background: #1f2937;
   color: #fff;
 }
+
+/* D-15: the countdown is always visible, small, at the top of the screen —
+   normal state is unobtrusive, just a bit of weight so it reads at a
+   glance. Word-spacing, not letter-spacing, per project convention for
+   Hebrew text. */
+.countdown {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  word-spacing: 0.1em;
+}
+
+/* The last 10 seconds (D-15) — stronger colour and weight, no layout shift
+   so the rest of the screen doesn't jump underneath it. */
+.countdown--urgent {
+  color: #dc2626;
+  font-size: 1.125rem;
+  font-weight: 800;
+}

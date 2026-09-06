@@ -1,5 +1,6 @@
 import { HEBREW_UI } from "@shared/messages.js";
 import type { LobbySnapshot, RoomPhase } from "@shared/protocol.js";
+import { Countdown } from "../components/Countdown";
 
 type RoundProps = {
   snapshot: LobbySnapshot;
@@ -17,16 +18,19 @@ const PHASE_HEADINGS: Record<Exclude<RoomPhase, "LOBBY">, string> = {
 
 /**
  * The in-game screen for every phase after LOBBY. Renders only what the
- * snapshot says — no client-side phase inference, no local timer state yet
- * (that's Task 2's Countdown component). Phase-specific content (the caption
- * form, the rating step) mounts at the two commented points below in plans
- * 02-03 and 02-04.
+ * snapshot says — no client-side phase inference. The countdown is mounted
+ * unconditionally at the top so it is always visible (D-15) rather than
+ * appearing only on some screens; it renders nothing itself when
+ * `deadlineAt` is null. Phase-specific content (the caption form, the
+ * rating step) mounts at the two commented points below in plans 02-03 and
+ * 02-04.
  */
 export function Round({ snapshot }: RoundProps) {
   const heading = snapshot.phase === "LOBBY" ? "" : PHASE_HEADINGS[snapshot.phase];
 
   return (
     <main>
+      <Countdown deadlineAt={snapshot.deadlineAt} serverNow={snapshot.serverNow} />
       <h1>{heading}</h1>
 
       {snapshot.round && (
