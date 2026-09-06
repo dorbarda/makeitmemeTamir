@@ -19,6 +19,17 @@ export function createServer() {
     res.json({ ok: true });
   });
 
+  // Explicit fallback for the deep join link (D-02/D-03): a phone opening
+  // `/join/<code>` cold — not via client-side navigation, e.g. tapping a
+  // WhatsApp link that opens straight into an in-app browser — must get the
+  // SPA shell, never a 404. The path segment is never interpolated into the
+  // returned HTML, so a crafted code cannot inject markup into the response.
+  app.get("/join/:code", (_req, res, next) => {
+    res.sendFile(path.join(CLIENT_DIST, "index.html"), (err) => {
+      if (err) next(err);
+    });
+  });
+
   app.use(express.static(CLIENT_DIST));
   app.get(/.*/, (req, res, next) => {
     if (path.extname(req.path)) {

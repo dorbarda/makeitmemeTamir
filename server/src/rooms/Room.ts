@@ -17,12 +17,18 @@ export type RenameOutcome =
 
 export class Room {
   readonly code: string;
+  /** Computed once at creation and cached — see RoomManager.createRoom. */
+  readonly joinUrl: string;
+  /** Computed once at creation and cached — see RoomManager.createRoom. */
+  readonly qrDataUrl: string;
   phase: RoomPhase = "LOBBY";
   players = new Map<string, Player>();
   hostId: string | null = null;
 
-  constructor(code: string) {
+  constructor(code: string, joinUrl: string, qrDataUrl: string) {
     this.code = code;
+    this.joinUrl = joinUrl;
+    this.qrDataUrl = qrDataUrl;
   }
 
   get isFull(): boolean {
@@ -129,8 +135,8 @@ export class Room {
     return {
       phase: this.phase,
       roomCode: this.code,
-      joinUrl: "", // filled by plan 01-03
-      qrDataUrl: "", // filled by plan 01-03
+      joinUrl: this.joinUrl,
+      qrDataUrl: this.qrDataUrl,
       players,
       readyCount,
       capacity: ROOM_CAPACITY,

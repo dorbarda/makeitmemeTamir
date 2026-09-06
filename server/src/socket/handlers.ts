@@ -3,6 +3,7 @@ import { CLIENT_EVENTS, SERVER_EVENTS, type ProtocolError } from "@shared/protoc
 import { HEBREW_ERRORS } from "@shared/messages.js";
 import { RATE_LIMIT_MAX_INTENTS, RATE_LIMIT_WINDOW_MS } from "../config.js";
 import { MAX_NAME_GRAPHEMES, sanitizeName, truncateToGraphemes } from "../names/nameValidation.js";
+import { resolveOrigin } from "../rooms/joinUrl.js";
 import type { RoomManager } from "../rooms/RoomManager.js";
 import type { SessionRegistry } from "../players/SessionRegistry.js";
 import type { SocketData } from "./authMiddleware.js";
@@ -49,7 +50,7 @@ export function registerHandlers(io: Server, socket: Socket, deps: HandlerDeps):
   const { roomManager, sessions } = deps;
   const data = socket.data as SocketData;
 
-  socket.on(CLIENT_EVENTS.createRoom, ({ name }: { name: string }) => {
+  socket.on(CLIENT_EVENTS.createRoom, async ({ name }: { name: string }) => {
     if (isRateLimited(data)) {
       emitError(socket, { code: "RATE_LIMITED", messageHe: HEBREW_ERRORS.RATE_LIMITED });
       return;
@@ -61,7 +62,8 @@ export function registerHandlers(io: Server, socket: Socket, deps: HandlerDeps):
       return;
     }
 
-    const room = roomManager.createRoom();
+    const origin = resolveOrigin(socket.handshake.headers);
+    const room = await roomManager.createRoom(origin);
     const token = sessions.issue();
     const player = room.addPlayer(preparedName, token);
     sessions.bind(token, room.code, player.id);

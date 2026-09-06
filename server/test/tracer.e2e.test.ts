@@ -110,8 +110,8 @@ describe("tracer: create -> join -> roster -> disconnect -> reconnect", () => {
   it("never returns the same room code twice, even a forced collision resolves distinctly", async () => {
     const { RoomManager: RealRoomManager } = await import("../src/rooms/RoomManager.js");
     const realManager = new RealRoomManager();
-    const roomA = realManager.createRoom();
-    const roomB = realManager.createRoom();
+    const roomA = await realManager.createRoom("https://example.test");
+    const roomB = await realManager.createRoom("https://example.test");
     expect(roomA.code).not.toBe(roomB.code);
 
     // Now force a genuine collision: stub the generator to repeat "1111" once,
@@ -127,8 +127,8 @@ describe("tracer: create -> join -> roster -> disconnect -> reconnect", () => {
 
     const { RoomManager: StubbedRoomManager } = await import("../src/rooms/RoomManager.js");
     const stubbedManager = new StubbedRoomManager();
-    const first = stubbedManager.createRoom(); // candidate "1111", accepted
-    const second = stubbedManager.createRoom(); // candidate "1111" collides, retries to "2222"
+    const first = await stubbedManager.createRoom("https://example.test"); // candidate "1111", accepted
+    const second = await stubbedManager.createRoom("https://example.test"); // candidate "1111" collides, retries to "2222"
 
     expect(first.code).toBe("1111");
     expect(second.code).toBe("2222");
