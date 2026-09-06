@@ -97,3 +97,29 @@ li {
   border-radius: 0.5rem;
   overflow-wrap: anywhere;
 }
+
+/* The room code needs to be readable at arm's length across a loud room —
+   large, bold, and centered, but still just digits so no letter-spacing is
+   needed (letter-spacing is reserved against Hebrew text elsewhere, per
+   project convention). */
+.room-code {
+  font-size: clamp(2.5rem, 16vw, 4rem);
+  font-weight: 700;
+  text-align: center;
+  margin: 0 0 1rem;
+}
+
+/* Relative width + max-width, never a fixed pixel size — this is exactly the
+   kind of element that overflowed a phone viewport before (see plan 01-01's
+   carried-forward lesson). */
+.qr-code {
+  display: block;
+  width: 60%;
+  max-width: 14rem;
+  height: auto;
+  margin: 0 auto 0.5rem;
+}
+
+.player--disconnected {
+  opacity: 0.55;
+}

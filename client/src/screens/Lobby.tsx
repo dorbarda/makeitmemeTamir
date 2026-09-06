@@ -3,6 +3,7 @@ import { CLIENT_EVENTS, SERVER_EVENTS, type LobbySnapshot, type ProtocolError } 
 import { HEBREW_ERRORS, HEBREW_UI } from "@shared/messages.js";
 import { getSocket } from "../socket/connection";
 import { graphemesRemaining, clampForInput } from "../names/nameInput";
+import { shareJoinLink } from "../share/shareJoinLink";
 
 type LobbyProps = {
   snapshot: LobbySnapshot;
@@ -12,6 +13,7 @@ export function Lobby({ snapshot }: LobbyProps) {
   const you = snapshot.players.find((p) => p.id === snapshot.you.id);
   const [renameValue, setRenameValue] = useState(you?.name ?? "");
   const [renameError, setRenameError] = useState<string | undefined>(undefined);
+  const [copied, setCopied] = useState(false);
 
   // The roster only ever changes when a fresh snapshot arrives — never
   // optimistically. Re-seed the field whenever our own stored name changes
@@ -19,6 +21,13 @@ export function Lobby({ snapshot }: LobbyProps) {
   useEffect(() => {
     setRenameValue(you?.name ?? "");
   }, [you?.name]);
+
+  // The copied confirmation is a brief toast, not a permanent label.
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(false), 3000);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
 
   function handleRename(e: React.FormEvent) {
     e.preventDefault();
@@ -46,18 +55,57 @@ export function Lobby({ snapshot }: LobbyProps) {
     socket.emit(CLIENT_EVENTS.rename, { name: renameValue });
   }
 
+  async function handleShare() {
+    const result = await shareJoinLink(snapshot.joinUrl);
+    if (result.outcome === "shared" || result.outcome === "dismissed") return;
+
+    // Fallback: open the WhatsApp invitation (the real distribution channel
+    // for this party, D-02) and also copy the link so a browser with
+    // neither a share sheet nor a WhatsApp handler can still paste it.
+    window.open(result.whatsAppUrl, "_blank", "noopener,noreferrer");
+    try {
+      await navigator.clipboard.writeText(snapshot.joinUrl);
+      setCopied(true);
+    } catch {
+      // Clipboard API unavailable or denied — the WhatsApp tab still opened.
+    }
+  }
+
   return (
     <main>
-      <h1>חדר {snapshot.roomCode}</h1>
+      {/* The code, the QR and the share control are rendered for every
+          player, never gated on snapshot.you.isHost (D-12) — isHost stays in
+          the snapshot for the server's own use and for plan 01-04's transfer
+          logic, but no crown/badge is shown here (deliberately declined). */}
+      <p>{HEBREW_UI.roomCodeLabel}</p>
+      <p className="room-code">{snapshot.roomCode}</p>
+
+      {snapshot.qrDataUrl && (
+        <>
+          <img className="qr-code" src={snapshot.qrDataUrl} alt={HEBREW_UI.scanToJoin} />
+          <p>{HEBREW_UI.scanToJoin}</p>
+        </>
+      )}
+
+      <button type="button" onClick={handleShare}>
+        {HEBREW_UI.shareButton}
+      </button>
+      {copied && <p role="status">{HEBREW_UI.copiedToast}</p>}
+
       <p>
-        {HEBREW_UI.playersInRoom}: {snapshot.readyCount} / {snapshot.players.length} מחוברים
+        {snapshot.readyCount} / {snapshot.capacity} {HEBREW_UI.connectedCount}
       </p>
-      {!snapshot.canStart && <p>{HEBREW_UI.waitingForPlayers}</p>}
+      {snapshot.canStart ? (
+        <p>{HEBREW_UI.readyToStart}</p>
+      ) : (
+        <p>{HEBREW_UI.waitingForPlayers}</p>
+      )}
+
       <ul>
         {snapshot.players.map((player) => (
-          <li key={player.id}>
+          <li key={player.id} className={player.connected ? undefined : "player--disconnected"}>
             {player.name}
-            {player.isHost ? " (מארח/ת)" : ""} — {player.connected ? "מחובר/ת" : "מנותק/ת"}
+            {!player.connected && " (מנותק/ת)"}
           </li>
         ))}
       </ul>
