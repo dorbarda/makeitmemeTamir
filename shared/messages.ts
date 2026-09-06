@@ -12,6 +12,17 @@ export const HEBREW_ERRORS: Record<ErrorCode, string> = {
   NAME_LOCKED: "אי אפשר לשנות שם אחרי שהמשחק התחיל",
   NOT_IN_ROOM: "אינך נמצא בחדר הזה",
   RATE_LIMITED: "רגע אחד — יותר מדי ניסיונות. נסו שוב בעוד כמה שניות",
+  // plan 02-01 — round engine error codes
+  NOT_HOST: "רק המנחה יכול לעשות את זה",
+  SETTINGS_LOCKED: "אי אפשר לשנות הגדרות אחרי שהמשחק התחיל",
+  SETTINGS_INVALID: "הערך שנבחר אינו חוקי",
+  NOT_ENOUGH_PLAYERS: "צריך לפחות 3 שחקנים כדי להתחיל",
+  WRONG_PHASE: "אי אפשר לעשות את זה עכשיו",
+  CAPTION_REQUIRED: "צריך לכתוב כיתוב כדי לשלוח",
+  ALREADY_SUBMITTED: "כבר שלחת כיתוב לסיבוב הזה",
+  ALREADY_RATED: "כבר דירגת את התמונה הזו",
+  CANNOT_RATE_OWN: "אי אפשר לדרג את התמונה של עצמך",
+  RATING_OUT_OF_RANGE: "הדירוג חייב להיות בין 1 ל-3",
 };
 
 export const HEBREW_UI = {
@@ -37,4 +48,36 @@ export const HEBREW_UI = {
   reconnecting: "מתחבר מחדש...",
   hostChanged: "המנחה התחלף",
   disconnectedTag: "(מנותק/ת)",
+  // plan 02-01 — host settings panel (wired by plan 02-02) and start-game
+  settingsTitle: "הגדרות משחק",
+  roundsLabel: "מספר סיבובים",
+  writingSecondsLabel: "זמן לכתיבה",
+  ratingSecondsLabel: "זמן לדירוג",
+  secondsSuffix: "שניות",
+  settingsLockedNote: "ההגדרות ננעלו — המשחק כבר התחיל",
+  startGameButton: "התחלת המשחק",
+  // plan 02-01 — in-game phase headings and round position (Round.tsx)
+  roundLabel: "סיבוב",
+  ofSeparator: "מתוך",
+  writingHeading: "כותבים כיתוב מצחיק",
+  revealBreakHeading: "רגע לפני החשיפה",
+  ratingHeading: "מדרגים את התמונה",
+  roundEndHeading: "הסיבוב הסתיים",
+  gameEndHeading: "המשחק נגמר",
+  timeLeftLabel: "זמן שנותר",
+  // plan 02-03 — writing phase (caption submission, progress-only visibility)
+  captionPlaceholder: "כתבו כיתוב מצחיק...",
+  sendCaptionButton: "שליחה",
+  alreadySubmittedNote: "הכיתוב שלך נשלח",
+  waitingForOthers: "ממתינים לשאר השחקנים",
+  submittedProgressSuffix: "שלחו כיתוב",
+  // plan 02-04 — per-meme rating step
+  yourMemeWaiting: "התמונה שלך מחכה לתורה",
+  ratedAlreadyNote: "כבר דירגת את התמונה הזו",
+  placeholderContentPrefix: "תוכן זמני",
+  // The digits stand in for the funny Hebrew tier names — that naming
+  // decision is deliberately deferred to Phase 3/4 (see STATE.md).
+  ratingTierPlaceholder1: "1",
+  ratingTierPlaceholder2: "2",
+  ratingTierPlaceholder3: "3",
 };

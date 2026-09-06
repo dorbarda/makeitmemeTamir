@@ -143,6 +143,29 @@ export function registerHandlers(io: Server, socket: Socket, deps: HandlerDeps):
     room.broadcast(io);
   });
 
+  socket.on(CLIENT_EVENTS.startGame, () => {
+    if (!data.playerId || !data.roomCode) {
+      emitError(socket, { code: "NOT_IN_ROOM", messageHe: HEBREW_ERRORS.NOT_IN_ROOM });
+      return;
+    }
+
+    const room = roomManager.findRoom(data.roomCode);
+    if (!room) {
+      emitError(socket, { code: "ROOM_NOT_FOUND", messageHe: HEBREW_ERRORS.ROOM_NOT_FOUND });
+      return;
+    }
+
+    // The payload carries no identity field a client could forge (T-02-01) —
+    // only the server-bound socket.data.playerId is trusted.
+    const result = room.startGame(data.playerId);
+    if (!result.ok) {
+      emitError(socket, { code: result.error, messageHe: HEBREW_ERRORS[result.error] });
+      return;
+    }
+
+    room.broadcast(io);
+  });
+
   socket.on(CLIENT_EVENTS.rejoin, () => {
     if (!data.playerId || !data.roomCode) {
       // No known binding for this socket's token (missing, expired, or a

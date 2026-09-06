@@ -56,3 +56,39 @@ export const HOST_TRANSFER_GRACE_MS = ROSTER_FADE_GRACE_MS * 2; // 60s
 // a bad network must never be locked out of its own room by this.
 export const RATE_LIMIT_WINDOW_MS = 10_000;
 export const RATE_LIMIT_MAX_INTENTS = 10;
+
+// D-02: every host setting is a preset button, never free text or a slider.
+// D-04 (user-confirmed): index 0 of each array below is the default — 3
+// rounds / 60s writing / 10s rating.
+export const ROUND_COUNT_PRESETS = [3, 5, 7];
+export const DEFAULT_ROUND_COUNT = ROUND_COUNT_PRESETS[0]; // D-04
+
+export const WRITING_SECONDS_PRESETS = [45, 60, 90];
+export const DEFAULT_WRITING_SECONDS = WRITING_SECONDS_PRESETS[1]; // D-04
+
+export const RATING_SECONDS_PRESETS = [8, 10, 15];
+export const DEFAULT_RATING_SECONDS = RATING_SECONDS_PRESETS[1]; // D-04
+
+// D-07: the clock only ever shortens, never extends. Once everyone has
+// finished early, the phase collapses to a short closing beat instead of
+// cutting instantly — an instant screen swap would steal the last person's
+// submit confirmation and read as a bug.
+export const WRITING_COLLAPSE_MS = 3_000;
+export const RATING_COLLAPSE_MS = 2_000;
+
+// D-11: fixed pacing beats between memes and between major phases,
+// deliberately NOT exposed as host settings — they are animation timing
+// rather than game rules. An instant cut on a phone reads as "did I miss
+// something?".
+export const BETWEEN_MEMES_MS = 2_000;
+export const BETWEEN_PHASES_MS = 3_000;
+
+// D-09: fewer than this many submitted captions and the rating phase is
+// skipped entirely (advances straight to the next round / game end) — one
+// caption cannot be meaningfully rated since its sole author is barred from
+// rating it.
+export const MIN_SUBMISSIONS_TO_RATE = 2;
+
+// A payload-size bound for threat T-02-08, not a UX limit — Phase 3 owns
+// whatever visible caption length is actually shown to players.
+export const MAX_CAPTION_GRAPHEMES = 120;
