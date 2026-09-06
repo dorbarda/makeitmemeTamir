@@ -53,19 +53,19 @@ Decimal phases appear between their surrounding integers in numeric order.
 Plans:
 **Wave 1**
 
-- [ ] 01-01-PLAN.md — Greenfield scaffold, shared wire contract, and the end-to-end create/join/roster/reconnect tracer slice
+- [x] 01-01-PLAN.md — Greenfield scaffold, shared wire contract, and the end-to-end create/join/roster/reconnect tracer slice
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 01-02-PLAN.md — Free-text names: grapheme-aware limits, auto-numbered duplicates, lobby rename, capacity cap
+- [x] 01-02-PLAN.md — Free-text names: grapheme-aware limits, auto-numbered duplicates, lobby rename, capacity cap
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 01-03-PLAN.md — Ways in: WhatsApp join link, QR code, manual 4-digit fallback, and the live lobby screen
+- [x] 01-03-PLAN.md — Ways in: WhatsApp join link, QR code, manual 4-digit fallback, and the live lobby screen
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 01-04-PLAN.md — Resilience: grace-delayed roster fade, automatic host transfer, and full resync on every return
+- [x] 01-04-PLAN.md — Resilience: grace-delayed roster fade, automatic host transfer, and full resync on every return
 
 ### Phase 2: Server-Authoritative Round Engine
 
