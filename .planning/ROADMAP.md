@@ -41,7 +41,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Requirements**: LOBBY-01, LOBBY-02, LOBBY-03, LOBBY-04, LOBBY-05, LIVE-02
 **Success Criteria** (what must be TRUE):
   1. Host can create a room and receive a short join code plus a scannable QR code that leads to the same room
-  2. A player can join by entering the room code and a display name, with no signup or password, and duplicate display names are rejected
+  2. A player can join by tapping a shared link (or entering the 4-digit room code) and a display name, with no signup or password, and a duplicate display name is automatically numbered rather than rejected, so nobody is ever blocked from joining
   3. Every player who has joined appears in a live-updating roster visible to everyone else in the room
   4. A player who locks their phone, refreshes the page, or briefly disconnects rejoins the same room afterward with their same name and score intact — verified on a real phone, not just a browser tab
 **Plans**: TBD
