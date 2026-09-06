@@ -1,7 +1,7 @@
 import type { Server, Socket } from "socket.io";
 import { CLIENT_EVENTS, SERVER_EVENTS, type ProtocolError, type SettingKey } from "@shared/protocol.js";
 import { HEBREW_ERRORS } from "@shared/messages.js";
-import { RATE_LIMIT_MAX_INTENTS, RATE_LIMIT_WINDOW_MS } from "../config.js";
+import { MAX_CAPTION_GRAPHEMES, RATE_LIMIT_MAX_INTENTS, RATE_LIMIT_WINDOW_MS } from "../config.js";
 import { MAX_NAME_GRAPHEMES, sanitizeName, truncateToGraphemes } from "../names/nameValidation.js";
 import { resolveOrigin } from "../rooms/joinUrl.js";
 import type { RoomManager } from "../rooms/RoomManager.js";
@@ -26,6 +26,19 @@ function emitError(socket: Socket, error: ProtocolError): void {
  */
 function prepareName(raw: string): string {
   return truncateToGraphemes(sanitizeName(raw ?? ""), MAX_NAME_GRAPHEMES);
+}
+
+/**
+ * The same sanitize-then-truncate pipeline as `prepareName`, applied to a
+ * submitted caption instead of a name. Graphemes rather than code units
+ * because a code-unit slice can split an emoji surrogate pair, and emoji are
+ * explicitly allowed in player-authored text (Phase 1 D-08). This is a
+ * payload-size bound for T-02-08, not the enforcement point for D-14 — D-14
+ * is enforced entirely inside `Room.snapshotFor`'s omission of any caption
+ * field.
+ */
+function prepareCaption(raw: string): string {
+  return truncateToGraphemes(sanitizeName(raw ?? ""), MAX_CAPTION_GRAPHEMES);
 }
 
 /**
@@ -182,6 +195,29 @@ export function registerHandlers(io: Server, socket: Socket, deps: HandlerDeps):
     // The payload carries no identity field a client could forge (T-02-01) —
     // only the server-bound socket.data.playerId is trusted.
     const result = room.startGame(data.playerId);
+    if (!result.ok) {
+      emitError(socket, { code: result.error, messageHe: HEBREW_ERRORS[result.error] });
+      return;
+    }
+
+    room.broadcast(io);
+  });
+
+  socket.on(CLIENT_EVENTS.submitCaption, ({ text }: { text: string }) => {
+    if (!data.playerId || !data.roomCode) {
+      emitError(socket, { code: "NOT_IN_ROOM", messageHe: HEBREW_ERRORS.NOT_IN_ROOM });
+      return;
+    }
+
+    const room = roomManager.findRoom(data.roomCode);
+    if (!room) {
+      emitError(socket, { code: "ROOM_NOT_FOUND", messageHe: HEBREW_ERRORS.ROOM_NOT_FOUND });
+      return;
+    }
+
+    // The author is always socket.data.playerId (T-02-04) — the payload
+    // carries no player-id field for a client to forge.
+    const result = room.submitCaption(data.playerId, prepareCaption(text));
     if (!result.ok) {
       emitError(socket, { code: result.error, messageHe: HEBREW_ERRORS[result.error] });
       return;

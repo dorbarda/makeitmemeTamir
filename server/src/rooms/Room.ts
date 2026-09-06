@@ -7,6 +7,7 @@ import {
   type PlayerView,
   type RoomPhase,
   type SettingsOptions,
+  type SubmissionProgress,
 } from "@shared/protocol.js";
 import {
   BETWEEN_PHASES_MS,
@@ -16,6 +17,7 @@ import {
   ROOM_CAPACITY,
   ROSTER_FADE_GRACE_MS,
   ROUND_COUNT_PRESETS,
+  WRITING_COLLAPSE_MS,
   WRITING_SECONDS_PRESETS,
 } from "../config.js";
 import { defaultSettings, isPresetValue } from "./gameSettings.js";
@@ -37,6 +39,12 @@ export type StartGameOutcome =
 export type ChangeSettingOutcome =
   | { ok: true; settings: GameSettings }
   | { ok: false; error: "NOT_HOST" | "SETTINGS_LOCKED" | "SETTINGS_INVALID" };
+
+/** Result of a submit-caption attempt — never throws, always tells the
+ * caller why. Shaped exactly like RenameOutcome/StartGameOutcome. */
+export type SubmitCaptionOutcome =
+  | { ok: true }
+  | { ok: false; error: "WRONG_PHASE" | "CAPTION_REQUIRED" | "ALREADY_SUBMITTED" };
 
 export class Room {
   readonly code: string;
@@ -62,6 +70,11 @@ export class Room {
    * null in LOBBY/GAME_END. The single source of truth `snapshotFor` reads;
    * never a "seconds remaining" value. */
   deadlineAt: number | null = null;
+  /** playerId -> caption text, for the current round only. A `Map` is
+   * deliberate: its insertion order is the submission-arrival order plan
+   * 02-04 turns into the reveal rotation, captured for free and never
+   * re-derived. Cleared at the start of every round's writing phase. */
+  submissions = new Map<string, string>();
 
   /**
    * Invoked whenever a delayed internal timer (a roster fade, and later a
@@ -301,6 +314,68 @@ export class Room {
   }
 
   /**
+   * The single place any live deadline is ever shortened (D-07). Computes
+   * `Date.now() + targetMs`; if that instant is not strictly earlier than
+   * the current `deadlineAt` it returns false and changes nothing —
+   * otherwise it reschedules through `schedulePhase` with the same expiry
+   * callback and returns true. This one guard is what makes "the clock only
+   * ever shortens" a property of the code rather than a discipline every
+   * call site has to remember.
+   */
+  private collapseDeadline(targetMs: number, onExpire: () => void): boolean {
+    const candidate = Date.now() + targetMs;
+    if (this.deadlineAt !== null && candidate >= this.deadlineAt) {
+      return false;
+    }
+    this.schedulePhase(candidate, onExpire);
+    return true;
+  }
+
+  /**
+   * If every currently connected player has submitted a caption this round,
+   * collapses the writing deadline to `WRITING_COLLAPSE_MS` from now instead
+   * of leaving the room to sit out the rest of the original deadline
+   * (D-07). Deliberately keyed on connected players only (Phase 1 D-17,
+   * LIVE-03): a player who has left must never be able to hold the early
+   * finish hostage. Because collapse only shortens, a disconnected player
+   * who reconnects in time can still submit against the unchanged deadline.
+   */
+  private maybeCollapseWriting(): void {
+    const connectedPlayers = [...this.players.values()].filter((p) => p.connected);
+    if (connectedPlayers.length === 0) return;
+    const allSubmitted = connectedPlayers.every((p) => this.submissions.has(p.id));
+    if (allSubmitted) {
+      this.collapseDeadline(WRITING_COLLAPSE_MS, () => this.closeWriting());
+    }
+  }
+
+  /**
+   * Records a player's caption for the current round (ROUND-04/ROUND-05).
+   * `text` must already be sanitized and truncated by the caller — this only
+   * enforces the round-engine rules: refused with `WRONG_PHASE` outside
+   * WRITING, `CAPTION_REQUIRED` for an empty prepared string, and
+   * `ALREADY_SUBMITTED` for a second attempt from the same player in the
+   * same round (T-02-14 — no replay can overwrite a stored caption or
+   * double-count progress). On success, checks whether every connected
+   * player has now submitted and collapses the deadline if so (D-07).
+   */
+  submitCaption(playerId: string, text: string): SubmitCaptionOutcome {
+    if (this.phase !== "WRITING") {
+      return { ok: false, error: "WRONG_PHASE" };
+    }
+    if (text.length === 0) {
+      return { ok: false, error: "CAPTION_REQUIRED" };
+    }
+    if (this.submissions.has(playerId)) {
+      return { ok: false, error: "ALREADY_SUBMITTED" };
+    }
+
+    this.submissions.set(playerId, text);
+    this.maybeCollapseWriting();
+    return { ok: true };
+  }
+
+  /**
    * Changes one game setting (D-01/D-02). Host-only (T-02-02), refused once
    * settings are locked or the room has left LOBBY (D-05/T-02-12), and
    * refused for any value that is not one of that key's exact presets
@@ -357,6 +432,7 @@ export class Room {
    */
   private enterWriting(): void {
     this.phase = "WRITING";
+    this.submissions.clear();
     this.schedulePhase(Date.now() + this.settings.writingSeconds * 1000, () =>
       this.closeWriting(),
     );
@@ -428,6 +504,20 @@ export class Room {
       ratingSeconds: RATING_SECONDS_PRESETS,
     };
 
+    const inWriting = this.phase === "WRITING";
+    // D-14 — no caption text of any player, including this snapshot's own
+    // recipient, is ever placed in a WRITING snapshot. `progress` carries ids
+    // only; there is no field here a caption could occupy, so there is
+    // nothing to leak even to someone reading the raw socket frame.
+    const progress: SubmissionProgress | null = inWriting
+      ? {
+          submitted: this.submissions.size,
+          total: this.players.size,
+          submittedPlayerIds: [...this.submissions.keys()],
+        }
+      : null;
+    const you = this.players.get(playerId);
+
     return {
       phase: this.phase,
       roomCode: this.code,
@@ -446,11 +536,13 @@ export class Room {
       serverNow: Date.now(),
       deadlineAt: this.deadlineAt,
       round: this.phase === "LOBBY" ? null : { index: this.roundIndex, total: this.settings.rounds },
+      progress,
+      youSubmitted: inWriting && this.submissions.has(playerId),
+      // A trivial numbered placeholder, not a real photo — Phase 3 replaces
+      // this with the player's actual assigned image.
+      yourPlaceholderId: inWriting && you ? you.joinedAt + 1 : null,
       // Placeholders this plan does not fill — later plans in this phase own
       // the real data (see the field comments in shared/protocol.ts).
-      progress: null,
-      youSubmitted: false,
-      yourPlaceholderId: null,
       ratingStep: null,
       roundEnd: null,
     };
