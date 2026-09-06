@@ -6,7 +6,12 @@ import {
   type PlayerView,
   type RoomPhase,
 } from "@shared/protocol.js";
-import { MIN_PLAYERS_TO_START, ROOM_CAPACITY, ROSTER_FADE_GRACE_MS } from "../config.js";
+import {
+  HOST_TRANSFER_GRACE_MS,
+  MIN_PLAYERS_TO_START,
+  ROOM_CAPACITY,
+  ROSTER_FADE_GRACE_MS,
+} from "../config.js";
 import { normalizeForCompare } from "../names/nameValidation.js";
 import type { Player } from "../players/Player.js";
 
@@ -38,6 +43,8 @@ export class Room {
   onStateChanged?: () => void;
 
   private fadeTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private hostTransferTimer: ReturnType<typeof setTimeout> | null = null;
+  private nextJoinSeq = 0;
 
   constructor(code: string, joinUrl: string, qrDataUrl: string) {
     this.code = code;
@@ -61,6 +68,7 @@ export class Room {
       name: this.resolveDisplayName(name),
       connected: true,
       score: 0,
+      joinedAt: this.nextJoinSeq++,
     };
     this.players.set(player.id, player);
     if (this.hostId === null) {
@@ -125,7 +133,9 @@ export class Room {
 
   /**
    * Marks a returning player as connected again (rejoin). Cancels that
-   * player's pending roster-fade removal, if any (D-13).
+   * player's pending roster-fade removal, if any (D-13), and cancels a
+   * pending host-transfer countdown if the returning player is the current
+   * host reconnecting in time (D-16).
    */
   attach(playerId: string): void {
     const player = this.players.get(playerId);
@@ -133,6 +143,9 @@ export class Room {
 
     player.connected = true;
     this.clearFadeTimer(playerId);
+    if (playerId === this.hostId) {
+      this.clearHostTransferTimer();
+    }
   }
 
   /**
@@ -141,7 +154,10 @@ export class Room {
    * (D-13) — a re-disconnect always restarts this clock from scratch rather
    * than letting an earlier timer fire late. Once play has begun the player
    * is kept indefinitely with their score intact (D-17) and nothing is
-   * scheduled at all.
+   * scheduled at all. If the detaching player currently holds `hostId`,
+   * separately schedules a host-transfer countdown (D-16) regardless of
+   * phase, since a dead host is a problem whether or not the game has
+   * started.
    */
   detach(playerId: string): void {
     const player = this.players.get(playerId);
@@ -151,6 +167,10 @@ export class Room {
 
     if (this.phase === "LOBBY") {
       this.scheduleFade(playerId);
+    }
+
+    if (playerId === this.hostId) {
+      this.scheduleHostTransfer();
     }
   }
 
@@ -172,16 +192,59 @@ export class Room {
     }
   }
 
+  private scheduleHostTransfer(): void {
+    this.clearHostTransferTimer();
+    this.hostTransferTimer = setTimeout(() => {
+      this.hostTransferTimer = null;
+      this.transferHost();
+    }, HOST_TRANSFER_GRACE_MS);
+  }
+
+  private clearHostTransferTimer(): void {
+    if (this.hostTransferTimer) {
+      clearTimeout(this.hostTransferTimer);
+      this.hostTransferTimer = null;
+    }
+  }
+
+  /**
+   * Promotes the earliest-joined connected player to host (D-16). Chosen
+   * deterministically — an arbitrary map entry would be untestable and
+   * unexplainable to a room full of people watching it happen. Tolerates the
+   * current `hostId` no longer being in `players` at all (the roster-fade
+   * grace is shorter than the host-transfer grace, so a host who never
+   * returns is typically removed from the roster before this ever fires).
+   * If no connected player exists, leaves `hostId` untouched and returns
+   * without throwing — the room stays usable if anyone reconnects. Takes no
+   * arguments — there is no parameter a client-controlled caller could use
+   * to name a successor; the only input is the room's own player map.
+   */
+  transferHost(): void {
+    let successor: Player | undefined;
+    for (const player of this.players.values()) {
+      if (!player.connected) continue;
+      if (!successor || player.joinedAt < successor.joinedAt) {
+        successor = player;
+      }
+    }
+
+    if (!successor) return;
+
+    this.hostId = successor.id;
+    this.onStateChanged?.();
+  }
+
   /**
    * Clears every pending timer this room owns. Must be called wherever a
-   * room is torn down, so a fade callback scheduled before teardown can
-   * never fire against a room that no longer exists.
+   * room is torn down, so a fade or host-transfer callback scheduled before
+   * teardown can never fire against a room that no longer exists.
    */
   dispose(): void {
     for (const timer of this.fadeTimers.values()) {
       clearTimeout(timer);
     }
     this.fadeTimers.clear();
+    this.clearHostTransferTimer();
   }
 
   snapshotFor(playerId: string): LobbySnapshot {
