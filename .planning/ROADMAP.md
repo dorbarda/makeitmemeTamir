@@ -26,7 +26,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Room, Session & Reconnect Foundation** - Players can create/join a room by code or QR with a unique name, see who's in the room live, and survive a phone lock or refresh without losing identity or score
 - [x] **Phase 2: Server-Authoritative Round Engine** - The server owns every phase's clock so the game never freezes on a missing or slow player
-- [ ] **Phase 3: Core Loop Checkpoint (Real Phones, End-to-End)** - A full round of write-a-caption, rate memes one-at-a-time, and score is proven working on real phones before deeper features are built
+- [x] **Phase 3: Core Loop Checkpoint (Real Phones, End-to-End)** - A full round of write-a-caption, rate memes one-at-a-time, and score is proven working on real phones before deeper features are built
 - [ ] **Phase 4: Full Round, Rating & Scoring Completion** - The complete round loop ships: no-repeat photos, photo swap, cannot-rate-own-meme with hidden ratings until each meme's step closes, ranked round results, running score totals, final winner, and best-of-night
 - [ ] **Phase 5: Hebrew RTL Meme Compositor & Souvenir** - Players can produce and keep a correctly rendered, right-to-left Hebrew meme image as their souvenir
 - [ ] **Phase 6: Host Controls & RTL Interface Hardening** - The host has recovery tools for live mishaps, and the whole interface reads correctly in Hebrew on iPhone and Android
@@ -209,7 +209,7 @@ natural requirement-coverage position.)
 |-------|----------------|--------|-----------|
 | 1. Room, Session & Reconnect Foundation | 4/4 | Complete | 2026-09-06 |
 | 2. Server-Authoritative Round Engine | 5/5 | Complete | 2026-09-06 |
-| 3. Core Loop Checkpoint (Real Phones, End-to-End) | 0/TBD | Not started | - |
+| 3. Core Loop Checkpoint (Real Phones, End-to-End) | 1/1 | Complete | 2026-09-06 |
 | 4. Full Round, Rating & Scoring Completion | 0/TBD | Not started | - |
 | 5. Hebrew RTL Meme Compositor & Souvenir | 0/TBD | Not started | - |
 | 6. Host Controls & RTL Interface Hardening | 0/TBD | Not started | - |
