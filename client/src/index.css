@@ -226,3 +226,34 @@ li {
   color: #16a34a;
   font-weight: 700;
 }
+
+/* VOTE-01/03/04 — the per-meme rating step. Mobile-first, no fixed widths,
+   same shape as .writing-panel. */
+.rating-panel {
+  margin: 1rem 0;
+}
+
+/* Three tap targets in a row that wraps rather than scrolling sideways, so a
+   phone-width viewport never overflows regardless of screen width. */
+.rating-tiers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+/* At least 44px on every side — the smallest comfortably tappable target on
+   a phone (same rule the global input/button rule already applies). No
+   letter-spacing on the Hebrew/digit label, per project convention. */
+.rating-tier {
+  flex: 1 1 4rem;
+  min-width: 3.5rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 0.5rem;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  font-weight: 700;
+  font-size: 1.25rem;
+}
