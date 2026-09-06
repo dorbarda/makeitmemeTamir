@@ -80,7 +80,28 @@ Plans:
   4. While writing is open, players see only a submission-progress count (e.g. "8 of 12") — never other players' content before the round closes
   5. A round or a rating step never stalls indefinitely because one player left, disconnected, or simply never responded
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 02-01-PLAN.md — Wire contract, timing constants, and the end-to-end tracer: the server runs the whole round clock by itself
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 02-02-PLAN.md — Host settings: preset-only rounds/writing/rating lengths, server-side validation, and the lock at game start
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 02-03-PLAN.md — The writing phase: captions in, progress-only visibility, and a deadline that only ever moves earlier
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 02-04-PLAN.md — One meme at a time: the submission-derived rating rotation and its per-step server clock
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 02-05-PLAN.md — Closing the loop: too-few-captions skip, round and game end, and the never-stalls battery
 
 ### Phase 3: Core Loop Checkpoint (Real Phones, End-to-End)
 
@@ -187,7 +208,7 @@ natural requirement-coverage position.)
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Room, Session & Reconnect Foundation | 4/4 | Complete | 2026-09-06 |
-| 2. Server-Authoritative Round Engine | 0/TBD | Not started | - |
+| 2. Server-Authoritative Round Engine | 0/5 | Not started | - |
 | 3. Core Loop Checkpoint (Real Phones, End-to-End) | 0/TBD | Not started | - |
 | 4. Full Round, Rating & Scoring Completion | 0/TBD | Not started | - |
 | 5. Hebrew RTL Meme Compositor & Souvenir | 0/TBD | Not started | - |
