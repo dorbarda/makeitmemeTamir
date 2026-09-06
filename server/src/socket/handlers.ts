@@ -64,6 +64,11 @@ export function registerHandlers(io: Server, socket: Socket, deps: HandlerDeps):
 
     const origin = resolveOrigin(socket.handshake.headers);
     const room = await roomManager.createRoom(origin);
+    // The one place `io` is naturally in scope at room-creation time — wires
+    // the room's delayed internal timers (roster fade, host transfer) to a
+    // real broadcast for the lifetime of the room. Left unset in tests that
+    // construct a bare `Room` directly (see rosterFade/hostTransfer tests).
+    room.onStateChanged = () => room.broadcast(io);
     const token = sessions.issue();
     const player = room.addPlayer(preparedName, token);
     sessions.bind(token, room.code, player.id);
