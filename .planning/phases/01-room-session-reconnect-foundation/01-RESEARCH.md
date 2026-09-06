@@ -491,16 +491,21 @@ Not applicable — this is a greenfield phase (no rename/refactor/migration). No
 
 **If this table is empty:** N/A — see entries above; all are flagged for planner/user awareness, none block planning.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Exact numeric grace-delay values (A3 above)**
    - What we know: Socket.IO's own ping/pong timing model bounds how fast a dead connection *can* be detected; PITFALLS.md independently recommends shortening the defaults for a room this size.
    - What's unclear: No source states a "correct" grace-delay length for a specific "does this read as a bug at a live party" threshold — this is inherently a UX judgment call, not a technical fact.
+   - RESOLVED: Carried into plan 01-04. Both constants derive from a single `DEAD_SOCKET_WINDOW_MS` in
+     `server/src/config.ts`, are shipped as `[ASSUMED]`, and 01-04 Task 3 is explicitly instructed to correct
+     them if a real device disagrees.
    - Recommendation: Ship the A3 numbers as a starting point, but treat this phase's real-phone verification step as the actual source of truth — adjust the constants based on what a real lock/unlock cycle produces, before locking them in as final.
 
 2. **Should the manual room-code fallback (D-04) validate code format client-side before submitting?**
    - What we know: The code is always exactly 4 digits (D-01).
    - What's unclear: Whether a non-numeric or wrong-length input should be blocked at the input level (e.g., `inputMode="numeric"` + `maxLength={4}`) or allowed and rejected server-side with a Hebrew error message.
+   - RESOLVED: Carried into plan 01-03 Task 2, which implements the dual client-hint + server-authoritative
+     validation verbatim.
    - Recommendation: Do both — `inputMode="numeric"` on the input for the correct mobile keyboard (this also serves LOBBY-02/D-04's "digits open the numeric keypad" rationale), plus a server-side "room not found" Hebrew message as the authoritative fallback, since the client-side restriction alone can't be trusted per the general enforcement-tier principle in this document.
 
 ## Environment Availability
