@@ -139,3 +139,139 @@ li {
   background: #1f2937;
   color: #fff;
 }
+
+/* D-15: the countdown is always visible, small, at the top of the screen —
+   normal state is unobtrusive, just a bit of weight so it reads at a
+   glance. Word-spacing, not letter-spacing, per project convention for
+   Hebrew text. */
+.countdown {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  word-spacing: 0.1em;
+}
+
+/* The last 10 seconds (D-15) — stronger colour and weight, no layout shift
+   so the rest of the screen doesn't jump underneath it. */
+.countdown--urgent {
+  color: #dc2626;
+  font-size: 1.125rem;
+  font-weight: 800;
+}
+
+/* D-01/D-02 — the host settings panel. Preset buttons are always laid out in
+   a row that wraps, never scrolls sideways, so a phone-width viewport never
+   overflows regardless of how many presets a setting has. */
+.settings-panel {
+  margin: 1rem 0;
+  padding: 0.875rem 1rem;
+  border: 1px solid currentColor;
+  border-radius: 0.5rem;
+}
+
+.settings-preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+}
+
+.settings-preset {
+  width: auto;
+  min-width: 3.5rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 0.5rem;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  font-weight: 600;
+}
+
+.settings-preset--selected {
+  background: #1f6feb;
+  border-color: #1f6feb;
+  color: #fff;
+}
+
+/* D-13/D-14 — the writing phase panel. Mobile-first, no fixed widths; the
+   textarea inherits the root 16px floor (iOS zoom) from the global
+   input/button rule below. */
+.writing-panel {
+  margin: 1rem 0;
+}
+
+.writing-panel textarea {
+  font: inherit;
+  width: 100%;
+  min-height: 4.5rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.5rem;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  resize: vertical;
+}
+
+/* The at-a-glance count ("8 מתוך 12 שלחו", D-13) — no letter-spacing on
+   Hebrew text, per project convention. */
+.writing-progress {
+  font-weight: 600;
+  word-spacing: 0.1em;
+}
+
+/* A positive marker only, never a mark against the players who haven't sent
+   yet (D-13) — no negative color, just presence. */
+.roster-check {
+  color: #16a34a;
+  font-weight: 700;
+}
+
+/* VOTE-01/03/04 — the per-meme rating step. Mobile-first, no fixed widths,
+   same shape as .writing-panel. */
+.rating-panel {
+  margin: 1rem 0;
+}
+
+/* Three tap targets in a row that wraps rather than scrolling sideways, so a
+   phone-width viewport never overflows regardless of screen width. */
+.rating-tiers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+/* At least 44px on every side — the smallest comfortably tappable target on
+   a phone (same rule the global input/button rule already applies). No
+   letter-spacing on the Hebrew/digit label, per project convention. */
+.rating-tier {
+  flex: 1 1 4rem;
+  min-width: 3.5rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 0.5rem;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  font-weight: 700;
+  font-size: 1.25rem;
+}
+
+/* VOTE-04/D-10 — the round-end and game-end screens. Mobile-first, no fixed
+   widths, same shape as .writing-panel/.rating-panel. */
+.round-end-panel {
+  margin: 1rem 0;
+}
+
+.round-end-panel ul {
+  margin: 0;
+}
+
+/* Long Hebrew captions wrap rather than widening the layout (no fixed
+   pixel widths anywhere in this file, per project convention); no
+   letter-spacing on the Hebrew text. */
+.round-end-entry {
+  overflow-wrap: break-word;
+}
+

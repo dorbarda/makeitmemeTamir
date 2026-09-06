@@ -15,7 +15,7 @@ describe("automatic host transfer on a dead host (D-16)", () => {
     // player record at 30s and confound a "does the host come back cleanly"
     // assertion with an unrelated timer. The one test that deliberately
     // exercises the LOBBY fade-then-transfer ordering says so explicitly.
-    room.phase = "IN_GAME";
+    room.phase = "WRITING";
   });
 
   afterEach(() => {

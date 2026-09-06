@@ -2,16 +2,33 @@ import { randomUUID } from "node:crypto";
 import type { Server } from "socket.io";
 import {
   SERVER_EVENTS,
+  type GameSettings,
   type LobbySnapshot,
   type PlayerView,
+  type RatingStepView,
+  type RatingValue,
   type RoomPhase,
+  type RoundEndEntry,
+  type RoundEndView,
+  type SettingsOptions,
+  type SubmissionProgress,
 } from "@shared/protocol.js";
 import {
+  BETWEEN_MEMES_MS,
+  BETWEEN_PHASES_MS,
   HOST_TRANSFER_GRACE_MS,
   MIN_PLAYERS_TO_START,
+  MIN_SUBMISSIONS_TO_RATE,
+  RATING_COLLAPSE_MS,
+  RATING_SECONDS_PRESETS,
   ROOM_CAPACITY,
   ROSTER_FADE_GRACE_MS,
+  ROUND_COUNT_PRESETS,
+  WRITING_COLLAPSE_MS,
+  WRITING_SECONDS_PRESETS,
 } from "../config.js";
+import { defaultSettings, isPresetValue } from "./gameSettings.js";
+import { buildRotation, eligibleRaters } from "./rotation.js";
 import { normalizeForCompare } from "../names/nameValidation.js";
 import type { Player } from "../players/Player.js";
 
@@ -19,6 +36,35 @@ import type { Player } from "../players/Player.js";
 export type RenameOutcome =
   | { ok: true; name: string }
   | { ok: false; error: "NAME_LOCKED" | "NAME_REQUIRED" };
+
+/** Result of a start-game attempt — never throws, always tells the caller why. */
+export type StartGameOutcome =
+  | { ok: true }
+  | { ok: false; error: "NOT_HOST" | "WRONG_PHASE" | "NOT_ENOUGH_PLAYERS" };
+
+/** Result of a change-settings attempt — never throws, always tells the
+ * caller why. Shaped exactly like RenameOutcome/StartGameOutcome. */
+export type ChangeSettingOutcome =
+  | { ok: true; settings: GameSettings }
+  | { ok: false; error: "NOT_HOST" | "SETTINGS_LOCKED" | "SETTINGS_INVALID" };
+
+/** Result of a submit-caption attempt — never throws, always tells the
+ * caller why. Shaped exactly like RenameOutcome/StartGameOutcome. */
+export type SubmitCaptionOutcome =
+  | { ok: true }
+  | { ok: false; error: "WRONG_PHASE" | "CAPTION_REQUIRED" | "ALREADY_SUBMITTED" };
+
+/** Result of a submit-rating attempt — never throws, always tells the
+ * caller why. Shaped exactly like RenameOutcome/StartGameOutcome/
+ * SubmitCaptionOutcome. Refusal order (checked in `submitRating`): phase and
+ * stepIndex first (WRONG_PHASE), then identity (CANNOT_RATE_OWN), then value
+ * shape (RATING_OUT_OF_RANGE), then replay (ALREADY_RATED). */
+export type SubmitRatingOutcome =
+  | { ok: true }
+  | {
+      ok: false;
+      error: "WRONG_PHASE" | "CANNOT_RATE_OWN" | "ALREADY_RATED" | "RATING_OUT_OF_RANGE";
+    };
 
 export class Room {
   readonly code: string;
@@ -29,6 +75,45 @@ export class Room {
   phase: RoomPhase = "LOBBY";
   players = new Map<string, Player>();
   hostId: string | null = null;
+
+  /** D-01/D-02 — seeded from the three DEFAULT_* constants, host-adjustable
+   * pre-game via `change-settings` (plan 02-02), locked the moment the game
+   * starts. Every round transition reads this, never a DEFAULT_* constant
+   * directly, so a host who changed a setting is never silently ignored. */
+  settings: GameSettings = defaultSettings();
+  /** D-05 — true from the moment the game starts; settings are immutable
+   * after that for the lifetime of the room. */
+  settingsLocked = false;
+  /** 1-based once play starts; 0 while still in LOBBY. */
+  roundIndex = 0;
+  /** D-12 — the absolute epoch-ms deadline for the current live phase, or
+   * null in LOBBY/GAME_END. The single source of truth `snapshotFor` reads;
+   * never a "seconds remaining" value. */
+  deadlineAt: number | null = null;
+  /** playerId -> caption text, for the current round only. A `Map` is
+   * deliberate: its insertion order is the submission-arrival order plan
+   * 02-04 turns into the reveal rotation, captured for free and never
+   * re-derived. Cleared at the start of every round's writing phase. */
+  submissions = new Map<string, string>();
+
+  /** Built once from `submissions` when writing closes (D-08) — the ordered
+   * list of author ids to reveal and rate, one per rating step. Never
+   * re-derived mid-round: `stepIndex` indexes into this same array for the
+   * whole rating phase, so a reconnecting phone always lands on the same
+   * step everyone else is on. */
+  rotation: string[] = [];
+  /** -1 before rating begins; otherwise the index into `rotation` of the
+   * meme currently on screen (during RATING) or about to be shown next
+   * (during REVEAL_BREAK). */
+  stepIndex = -1;
+  /** stepIndex -> raterId -> the value that rater cast. A player absent from
+   * a step's inner map simply never rated it (D-10) — no default is ever
+   * written on their behalf. */
+  ratings = new Map<number, Map<string, RatingValue>>();
+  /** stepIndex -> the number of eligible raters at the exact moment that
+   * step closed. Recorded so Phase 4 can choose between a sum and an average
+   * without a rework (D-10's flag). */
+  eligibleAtClose = new Map<number, number>();
 
   /**
    * Invoked whenever a delayed internal timer (a roster fade, and later a
@@ -44,6 +129,10 @@ export class Room {
 
   private fadeTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private hostTransferTimer: ReturnType<typeof setTimeout> | null = null;
+  /** The single round-clock timer primitive — only one phase is ever "live"
+   * at a time, so unlike `fadeTimers` this needs no map. Follows the exact
+   * same schedule/clear/dispose shape as `fadeTimers`/`hostTransferTimer`. */
+  private phaseTimer: ReturnType<typeof setTimeout> | null = null;
   private nextJoinSeq = 0;
 
   constructor(code: string, joinUrl: string, qrDataUrl: string) {
@@ -235,9 +324,352 @@ export class Room {
   }
 
   /**
+   * The single round-clock timer primitive every phase transition schedules
+   * through. Clears any existing phase timer first (so a redundant call can
+   * never leave two timers racing), stores the absolute deadline, and fires
+   * `onExpire` once the deadline is reached — mutating state first and
+   * notifying second, exactly like `scheduleFade`'s callback. `Room` must
+   * never call `broadcast` from a timer: it has no hard dependency on
+   * `Server`, only on the `onStateChanged` callback the caller wires up.
+   */
+  private schedulePhase(deadlineAt: number, onExpire: () => void): void {
+    this.clearPhaseTimer();
+    this.deadlineAt = deadlineAt;
+    this.phaseTimer = setTimeout(
+      () => {
+        this.phaseTimer = null;
+        onExpire();
+        this.onStateChanged?.();
+      },
+      Math.max(0, deadlineAt - Date.now()),
+    );
+  }
+
+  private clearPhaseTimer(): void {
+    if (this.phaseTimer) {
+      clearTimeout(this.phaseTimer);
+      this.phaseTimer = null;
+    }
+  }
+
+  /**
+   * The single place any live deadline is ever shortened (D-07). Computes
+   * `Date.now() + targetMs`; if that instant is not strictly earlier than
+   * the current `deadlineAt` it returns false and changes nothing —
+   * otherwise it reschedules through `schedulePhase` with the same expiry
+   * callback and returns true. This one guard is what makes "the clock only
+   * ever shortens" a property of the code rather than a discipline every
+   * call site has to remember.
+   */
+  private collapseDeadline(targetMs: number, onExpire: () => void): boolean {
+    const candidate = Date.now() + targetMs;
+    if (this.deadlineAt !== null && candidate >= this.deadlineAt) {
+      return false;
+    }
+    this.schedulePhase(candidate, onExpire);
+    return true;
+  }
+
+  /**
+   * If every currently connected player has submitted a caption this round,
+   * collapses the writing deadline to `WRITING_COLLAPSE_MS` from now instead
+   * of leaving the room to sit out the rest of the original deadline
+   * (D-07). Deliberately keyed on connected players only (Phase 1 D-17,
+   * LIVE-03): a player who has left must never be able to hold the early
+   * finish hostage. Because collapse only shortens, a disconnected player
+   * who reconnects in time can still submit against the unchanged deadline.
+   */
+  private maybeCollapseWriting(): void {
+    const connectedPlayers = [...this.players.values()].filter((p) => p.connected);
+    if (connectedPlayers.length === 0) return;
+    const allSubmitted = connectedPlayers.every((p) => this.submissions.has(p.id));
+    if (allSubmitted) {
+      this.collapseDeadline(WRITING_COLLAPSE_MS, () => this.closeWriting());
+    }
+  }
+
+  /**
+   * Records a player's caption for the current round (ROUND-04/ROUND-05).
+   * `text` must already be sanitized and truncated by the caller — this only
+   * enforces the round-engine rules: refused with `WRONG_PHASE` outside
+   * WRITING, `CAPTION_REQUIRED` for an empty prepared string, and
+   * `ALREADY_SUBMITTED` for a second attempt from the same player in the
+   * same round (T-02-14 — no replay can overwrite a stored caption or
+   * double-count progress). On success, checks whether every connected
+   * player has now submitted and collapses the deadline if so (D-07).
+   */
+  submitCaption(playerId: string, text: string): SubmitCaptionOutcome {
+    if (this.phase !== "WRITING") {
+      return { ok: false, error: "WRONG_PHASE" };
+    }
+    if (text.length === 0) {
+      return { ok: false, error: "CAPTION_REQUIRED" };
+    }
+    if (this.submissions.has(playerId)) {
+      return { ok: false, error: "ALREADY_SUBMITTED" };
+    }
+
+    this.submissions.set(playerId, text);
+    this.maybeCollapseWriting();
+    return { ok: true };
+  }
+
+  /**
+   * Changes one game setting (D-01/D-02). Host-only (T-02-02), refused once
+   * settings are locked or the room has left LOBBY (D-05/T-02-12), and
+   * refused for any value that is not one of that key's exact presets
+   * (T-02-03) — never a range check, never a client-supplied object spread.
+   * Order of refusal: identity first, then lock state, then value validity —
+   * matching this method's own doc order and the plan's stated precedence.
+   */
+  changeSetting(playerId: string, key: string, value: unknown): ChangeSettingOutcome {
+    if (playerId !== this.hostId) {
+      return { ok: false, error: "NOT_HOST" };
+    }
+    if (this.settingsLocked || this.phase !== "LOBBY") {
+      return { ok: false, error: "SETTINGS_LOCKED" };
+    }
+    if (!isPresetValue(key, value)) {
+      return { ok: false, error: "SETTINGS_INVALID" };
+    }
+
+    // isPresetValue narrows `key` to SettingKey and already proved `value` is
+    // an integer member of that key's own preset array — the cast reflects
+    // what was just verified, not an unchecked assumption.
+    this.settings[key] = value as number;
+    return { ok: true, settings: this.settings };
+  }
+
+  /**
+   * Starts the round engine (LOBBY-07). Host-only (T-02-01), requires the
+   * room still be in LOBBY (T-02-11 — a double-tap can never schedule a
+   * second concurrent phase timer), and requires the Phase 1 minimum of
+   * `MIN_PLAYERS_TO_START` (D-06, unchanged). Never throws. On success locks
+   * settings (D-05) and enters round 1's writing phase.
+   */
+  startGame(playerId: string): StartGameOutcome {
+    if (playerId !== this.hostId) {
+      return { ok: false, error: "NOT_HOST" };
+    }
+    if (this.phase !== "LOBBY") {
+      return { ok: false, error: "WRONG_PHASE" };
+    }
+    if (this.players.size < MIN_PLAYERS_TO_START) {
+      return { ok: false, error: "NOT_ENOUGH_PLAYERS" };
+    }
+
+    this.settingsLocked = true;
+    this.roundIndex = 1;
+    this.enterWriting();
+    return { ok: true };
+  }
+
+  /**
+   * Opens the writing phase for the current `roundIndex`, scheduling its
+   * close from `this.settings.writingSeconds` — never from a DEFAULT_*
+   * constant, so a host-changed setting is always honored.
+   */
+  private enterWriting(): void {
+    this.phase = "WRITING";
+    this.submissions.clear();
+    this.rotation = [];
+    this.stepIndex = -1;
+    this.ratings.clear();
+    this.eligibleAtClose.clear();
+    this.schedulePhase(Date.now() + this.settings.writingSeconds * 1000, () =>
+      this.closeWriting(),
+    );
+  }
+
+  /**
+   * Writing has closed. Builds this round's rating rotation once, from the
+   * submissions map (D-08) — a player who never submitted has no key in that
+   * map and is therefore simply absent from the rotation.
+   *
+   * D-09: if fewer than `MIN_SUBMISSIONS_TO_RATE` captions came in, the
+   * rating phase is skipped entirely — one caption (or zero) cannot be
+   * meaningfully rated, because its sole author is the one person barred
+   * from rating it, so showing a single-meme rating step would be a
+   * countdown nobody could ever act on. The round goes straight to
+   * `enterRoundEnd()` without ever entering `REVEAL_BREAK` or `RATING` for
+   * this round. Otherwise, opens the D-11 pacing beat before the first meme.
+   */
+  private closeWriting(): void {
+    this.rotation = buildRotation(this.submissions);
+    if (this.rotation.length < MIN_SUBMISSIONS_TO_RATE) {
+      this.enterRoundEnd();
+      return;
+    }
+    this.enterRevealBreak(0, BETWEEN_PHASES_MS);
+  }
+
+  /**
+   * D-11's pacing beat before a meme appears — 3000ms out of writing, 2000ms
+   * between memes. An instant screen swap on a phone reads as having missed
+   * something. Sets `stepIndex` to the upcoming step now (not when the
+   * break ends) so a phone reconnecting mid-break already knows which step
+   * it is waiting for.
+   */
+  private enterRevealBreak(nextStepIndex: number, delayMs: number): void {
+    this.phase = "REVEAL_BREAK";
+    this.stepIndex = nextStepIndex;
+    this.schedulePhase(Date.now() + delayMs, () => this.enterRatingStep(nextStepIndex));
+  }
+
+  /**
+   * Opens rating step `index`, scheduling its own close from
+   * `this.settings.ratingSeconds` — measured from the moment the step opens,
+   * not from when the preceding break started, so the break time never eats
+   * into the step's own rating time.
+   */
+  private enterRatingStep(index: number): void {
+    this.phase = "RATING";
+    this.stepIndex = index;
+    this.schedulePhase(Date.now() + this.settings.ratingSeconds * 1000, () =>
+      this.closeRatingStep(),
+    );
+  }
+
+  /**
+   * Closes the current rating step (VOTE-04). Records the eligible-rater
+   * count at the moment of close (D-10's flag for Phase 4), then either
+   * opens the next step's break or ends the round. Guarded on
+   * `phase === "RATING"` at entry and returns without effect otherwise, so a
+   * `collapseDeadline` reschedule landing on the exact instant the original
+   * timer would also have fired can never advance the rotation twice (the
+   * adjacency case) or re-open an already-closed step.
+   */
+  private closeRatingStep(): void {
+    if (this.phase !== "RATING") return;
+
+    const authorId = this.rotation[this.stepIndex];
+    this.eligibleAtClose.set(this.stepIndex, eligibleRaters(this.players, authorId).length);
+
+    const nextIndex = this.stepIndex + 1;
+    if (nextIndex < this.rotation.length) {
+      this.enterRevealBreak(nextIndex, BETWEEN_MEMES_MS);
+    } else {
+      this.enterRoundEnd();
+    }
+  }
+
+  /**
+   * Records a player's rating for the meme currently on screen (VOTE-01/03/
+   * 04). `stepIndex`/`value` arrive straight from the client payload with no
+   * prior coercion (T-02-05/T-02-06) — every check below is this method's
+   * own responsibility. Refusal order: wrong phase or a stale/future
+   * stepIndex -> `WRONG_PHASE` (this is what makes a replayed or stale frame
+   * land nowhere); the current step's author -> `CANNOT_RATE_OWN`; anything
+   * other than the literals 1, 2 or 3 -> `RATING_OUT_OF_RANGE`; a rater who
+   * already has an entry for this step -> `ALREADY_RATED`. On success,
+   * stores the value and checks whether every eligible rater has now rated
+   * (early-finish collapse, D-07).
+   */
+  submitRating(playerId: string, stepIndex: unknown, value: unknown): SubmitRatingOutcome {
+    if (this.phase !== "RATING" || stepIndex !== this.stepIndex) {
+      return { ok: false, error: "WRONG_PHASE" };
+    }
+
+    const authorId = this.rotation[this.stepIndex];
+    if (playerId === authorId) {
+      return { ok: false, error: "CANNOT_RATE_OWN" };
+    }
+
+    if (value !== 1 && value !== 2 && value !== 3) {
+      return { ok: false, error: "RATING_OUT_OF_RANGE" };
+    }
+
+    let stepRatings = this.ratings.get(this.stepIndex);
+    if (!stepRatings) {
+      stepRatings = new Map<string, RatingValue>();
+      this.ratings.set(this.stepIndex, stepRatings);
+    }
+
+    if (stepRatings.has(playerId)) {
+      return { ok: false, error: "ALREADY_RATED" };
+    }
+
+    stepRatings.set(playerId, value);
+    this.maybeCollapseRating();
+    return { ok: true };
+  }
+
+  /**
+   * If every eligible rater for the current step has now rated it, collapses
+   * the step's deadline to `RATING_COLLAPSE_MS` from now instead of leaving
+   * the room to sit out the rest of the original deadline (D-07). Reuses
+   * `collapseDeadline`, the single chokepoint through which any live
+   * deadline may ever be shortened, so "never extends" holds here for free.
+   */
+  private maybeCollapseRating(): void {
+    const authorId = this.rotation[this.stepIndex];
+    const eligible = eligibleRaters(this.players, authorId);
+    const stepRatings = this.ratings.get(this.stepIndex);
+    const allRated = eligible.length > 0 && eligible.every((id) => stepRatings?.has(id));
+    if (allRated) {
+      this.collapseDeadline(RATING_COLLAPSE_MS, () => this.closeRatingStep());
+    }
+  }
+
+  /**
+   * D-11's between-phases pacing beat, then either the next round's writing
+   * phase or, after the last round, game end. Computed entirely from the
+   * room's own state (`roundIndex`, `settings.rounds`) — no client input
+   * names the next phase, matching `transferHost()`'s no-arguments rule.
+   */
+  private enterRoundEnd(): void {
+    this.phase = "ROUND_END";
+    this.schedulePhase(Date.now() + BETWEEN_PHASES_MS, () => {
+      if (this.roundIndex < this.settings.rounds) {
+        this.roundIndex++;
+        this.enterWriting();
+      } else {
+        this.enterGameEnd();
+      }
+    });
+  }
+
+  /** Terminal: no timer, nothing further scheduled, no deadline. */
+  private enterGameEnd(): void {
+    this.phase = "GAME_END";
+    this.clearPhaseTimer();
+    this.deadlineAt = null;
+  }
+
+  /**
+   * Builds the round-end view for the round that just closed (VOTE-04's
+   * empty edge, D-10). For each step in `rotation`, in the same order the
+   * memes were shown, carries the author's id and current name, the
+   * caption, the raw rating values that step received (never a default for
+   * a silent rater), and the eligible-rater count recorded at the moment
+   * that step closed. Deliberately does NOT reduce `ratings` to a score:
+   * D-10 flagged that a meme rated while some eligible raters were away
+   * would score lower purely by bad luck of timing, and whether the answer
+   * is a sum, an average or a floor is a Phase 4 scoring decision this
+   * engine must not pre-empt — it only guarantees both numbers are exposed.
+   * A round that skipped rating (D-09) yields an empty `entries` array,
+   * never null and never a fabricated entry.
+   */
+  private buildRoundEndView(): RoundEndView {
+    const entries: RoundEndEntry[] = this.rotation.map((authorId, index) => {
+      const author = this.players.get(authorId);
+      const stepRatings = this.ratings.get(index);
+      return {
+        authorId,
+        authorName: author?.name ?? "",
+        caption: this.submissions.get(authorId) ?? "",
+        ratings: stepRatings ? [...stepRatings.values()] : [],
+        eligibleAtClose: this.eligibleAtClose.get(index) ?? 0,
+      };
+    });
+    return { entries };
+  }
+
+  /**
    * Clears every pending timer this room owns. Must be called wherever a
-   * room is torn down, so a fade or host-transfer callback scheduled before
-   * teardown can never fire against a room that no longer exists.
+   * room is torn down, so a fade, host-transfer, or phase-timer callback
+   * scheduled before teardown can never fire against a room that no longer
+   * exists (T-02-10).
    */
   dispose(): void {
     for (const timer of this.fadeTimers.values()) {
@@ -245,6 +677,7 @@ export class Room {
     }
     this.fadeTimers.clear();
     this.clearHostTransferTimer();
+    this.clearPhaseTimer();
   }
 
   snapshotFor(playerId: string): LobbySnapshot {
@@ -258,6 +691,52 @@ export class Room {
 
     const readyCount = players.filter((p) => p.connected).length;
 
+    const settingsOptions: SettingsOptions = {
+      rounds: ROUND_COUNT_PRESETS,
+      writingSeconds: WRITING_SECONDS_PRESETS,
+      ratingSeconds: RATING_SECONDS_PRESETS,
+    };
+
+    const inWriting = this.phase === "WRITING";
+    // D-14 — no caption text of any player, including this snapshot's own
+    // recipient, is ever placed in a WRITING snapshot. `progress` carries ids
+    // only; there is no field here a caption could occupy, so there is
+    // nothing to leak even to someone reading the raw socket frame.
+    const progress: SubmissionProgress | null = inWriting
+      ? {
+          submitted: this.submissions.size,
+          total: this.players.size,
+          submittedPlayerIds: [...this.submissions.keys()],
+        }
+      : null;
+    const you = this.players.get(playerId);
+
+    // `ratingStep` carries the CURRENT step's caption only — never any other
+    // step's — and no author identity for anyone but the author themself
+    // (`youAreAuthor` is the only identity signal exposed). `null` in every
+    // phase but RATING, including REVEAL_BREAK, so no caption rides along
+    // during a break either (D-14's discipline extended to the reveal side).
+    let ratingStep: RatingStepView | null = null;
+    if (this.phase === "RATING") {
+      const authorId = this.rotation[this.stepIndex];
+      const author = this.players.get(authorId);
+      const stepRatings = this.ratings.get(this.stepIndex);
+      const eligible = eligibleRaters(this.players, authorId);
+      const youHaveRated = stepRatings?.has(playerId) ?? false;
+
+      ratingStep = {
+        index: this.stepIndex,
+        total: this.rotation.length,
+        caption: this.submissions.get(authorId) ?? "",
+        placeholderId: author ? author.joinedAt + 1 : 0,
+        youAreAuthor: playerId === authorId,
+        youMayRate: eligible.includes(playerId) && !youHaveRated,
+        youHaveRated,
+        ratedCount: stepRatings?.size ?? 0,
+        eligibleCount: eligible.length,
+      };
+    }
+
     return {
       phase: this.phase,
       roomCode: this.code,
@@ -266,8 +745,27 @@ export class Room {
       players,
       readyCount,
       capacity: ROOM_CAPACITY,
-      canStart: this.players.size >= MIN_PLAYERS_TO_START,
+      // Tightened beyond Phase 1's player-count-only gate: once the game has
+      // left LOBBY, starting again is never offered (T-02-11).
+      canStart: this.phase === "LOBBY" && this.players.size >= MIN_PLAYERS_TO_START,
       you: { id: playerId, isHost: playerId === this.hostId },
+      settings: this.settings,
+      settingsOptions,
+      settingsLocked: this.settingsLocked,
+      serverNow: Date.now(),
+      deadlineAt: this.deadlineAt,
+      round: this.phase === "LOBBY" ? null : { index: this.roundIndex, total: this.settings.rounds },
+      progress,
+      youSubmitted: inWriting && this.submissions.has(playerId),
+      // A trivial numbered placeholder, not a real photo — Phase 3 replaces
+      // this with the player's actual assigned image.
+      yourPlaceholderId: inWriting && you ? you.joinedAt + 1 : null,
+      ratingStep,
+      // T-02-20 — populated only for ROUND_END and GAME_END, so the full
+      // caption/rating set for the round never travels early (D-14's
+      // discipline extended to the round-end reveal).
+      roundEnd:
+        this.phase === "ROUND_END" || this.phase === "GAME_END" ? this.buildRoundEndView() : null,
     };
   }
 

@@ -68,7 +68,7 @@ describe("grace-delayed roster fade in the lobby (D-13)", () => {
   it("never removes a player disconnecting once play has begun, and their score and position survive", () => {
     const player = room.addPlayer("Guest", "t-guest");
     player.score = 7;
-    room.phase = "IN_GAME";
+    room.phase = "WRITING";
 
     room.detach(player.id);
     vi.advanceTimersByTime(ROSTER_FADE_GRACE_MS * 10);

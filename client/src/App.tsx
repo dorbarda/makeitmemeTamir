@@ -6,6 +6,7 @@ import { Home } from "./screens/Home";
 import { Join } from "./screens/Join";
 import { JoinByCode } from "./screens/JoinByCode";
 import { Lobby } from "./screens/Lobby";
+import { Round } from "./screens/Round";
 
 function readJoinCode(pathname: string): string | undefined {
   const match = /^\/join\/(\d{4})$/.exec(pathname);
@@ -43,7 +44,9 @@ function App() {
   // no interstitial, no extra tap, regardless of which route they landed on.
   let screen: ReactElement;
   if (snapshot) {
-    screen = <Lobby snapshot={snapshot} />;
+    // The client never decides the phase, it reads it — Room.ts is the sole
+    // authority over `snapshot.phase` (D-12).
+    screen = snapshot.phase === "LOBBY" ? <Lobby snapshot={snapshot} /> : <Round snapshot={snapshot} />;
   } else {
     const joinCode = readJoinCode(pathname);
     if (joinCode) {

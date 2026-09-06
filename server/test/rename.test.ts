@@ -95,7 +95,7 @@ describe("lobby-only rename with auto-numbered collisions (D-07, D-09)", () => {
 
     const room = server.roomManager.findRoom(roomCode);
     expect(room).toBeDefined();
-    room!.phase = "IN_GAME";
+    room!.phase = "WRITING";
 
     const errorA = waitFor<ProtocolError>(clientA, SERVER_EVENTS.error);
     clientA.emit(CLIENT_EVENTS.rename, { name: "שרה החדשה" });
