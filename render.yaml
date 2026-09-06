@@ -1,0 +1,24 @@
+# Render deployment for Tamir Meme Party.
+#
+# One web service: the Node/Express + Socket.IO server also serves the built
+# React client, so there is no separate static site and no cross-origin setup.
+#
+# Free-plan caveat: a free web service spins down after a period with no inbound
+# traffic and takes time to wake. Because all game state lives in memory, a
+# spin-down mid-party would lose the running game. Open the URL a few minutes
+# before guests join so the service is awake; once players are connected their
+# WebSocket traffic keeps it awake. Verify the current free-plan terms before
+# relying on them for the event, and consider a paid instance for party week.
+services:
+  - type: web
+    name: tamir-meme-party
+    runtime: node
+    plan: free
+    # Build both workspaces, then build the client bundle the server will serve.
+    buildCommand: npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      # Vite 8 requires Node 20.19+ / 22.12+.
+      - key: NODE_VERSION
+        value: "22.12.0"

@@ -1,0 +1,9 @@
+.planning/research/.cache/
+node_modules/
+dist/
+.env
+*.local
+
+# GSD run-scoped ephemera (session id, pid — not shareable state)
+.gsd/
+.planning/milestone.lock
