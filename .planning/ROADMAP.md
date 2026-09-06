@@ -186,7 +186,7 @@ natural requirement-coverage position.)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Room, Session & Reconnect Foundation | 0/4 | Planned | - |
+| 1. Room, Session & Reconnect Foundation | 4/4 | Complete | 2026-09-06 |
 | 2. Server-Authoritative Round Engine | 0/TBD | Not started | - |
 | 3. Core Loop Checkpoint (Real Phones, End-to-End) | 0/TBD | Not started | - |
 | 4. Full Round, Rating & Scoring Completion | 0/TBD | Not started | - |
