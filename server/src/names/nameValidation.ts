@@ -11,12 +11,30 @@ const segmenter = new Intl.Segmenter("he", { granularity: "grapheme" });
 /**
  * Strips Unicode category Cc (control) and Cf (format) characters. Cf alone
  * already covers every bidi-override and zero-width character named in the
- * threat model (U+200E/U+200F, U+202A-U+202E, U+2066-U+2069, U+200B-U+200D,
+ * threat model (U+200E/U+200F, U+202A-U+202E, U+2066-U+2069, U+200B-U+200C,
  * U+FEFF all classify as Cf) — a category-based strip, not an enumerated
  * list, so no future bidi/format character needs a manual update here.
+ *
+ * ONE exception: U+200D ZERO WIDTH JOINER is what holds a multi-person emoji
+ * together. Stripping it as plain Cf shattered a family emoji into three
+ * separate emoji and charged three graphemes of the name budget instead of
+ * one, while buying nothing against name spoofing — a joiner is not a bidi
+ * override. It is kept only where it is doing that job, i.e. between two
+ * pictographs (a variation selector may sit in front of it, as in the
+ * couple-with-heart sequence); a stray joiner anywhere else is still
+ * stripped. `normalizeForCompare` then removes joiners entirely, so an
+ * invisible joiner cannot smuggle a visually identical twin of someone
+ * else's name past D-07's collision check.
  */
 function stripControlAndFormat(value: string): string {
-  return value.replace(/[\p{Cc}\p{Cf}]/gu, "");
+  return (
+    value
+      // Every control/format character except the joiner.
+      .replace(/(?!‍)[\p{Cc}\p{Cf}]/gu, "")
+      // Joiners that are not actually joining two pictographs.
+      .replace(/(?<![\p{Extended_Pictographic}️])‍/gu, "")
+      .replace(/‍(?!\p{Extended_Pictographic})/gu, "")
+  );
 }
 
 /**
@@ -57,5 +75,8 @@ export function truncateToGraphemes(name: string, max: number): string {
  * mixed-script name from being duplicated with different casing.
  */
 export function normalizeForCompare(name: string): string {
-  return sanitizeName(name).toLocaleLowerCase("he");
+  // Joiners are dropped here (but not from the display name) so a name padded
+  // with invisible joiners collapses onto the name it imitates and is
+  // auto-numbered by D-07 rather than standing beside it as a lookalike.
+  return sanitizeName(name).replace(/‍/gu, "").toLocaleLowerCase("he");
 }

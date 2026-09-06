@@ -88,3 +88,41 @@ describe("normalizeForCompare", () => {
     expect(normalizeForCompare("דור")).not.toBe(normalizeForCompare("דור 2"));
   });
 });
+
+describe("emoji joiners (regression: multi-person emoji were being shattered)", () => {
+  // sanitizeName strips Unicode category Cf, which swept up U+200D ZERO WIDTH
+  // JOINER and split a single family emoji into three separate ones — also
+  // charging three graphemes of the name budget instead of one.
+  const FAMILY = "\u{1F468}‍\u{1F469}‍\u{1F467}";
+  const COUPLE = "\u{1F469}‍❤️‍\u{1F468}";
+
+  it("keeps a family emoji intact and counts it as one character", () => {
+    expect(sanitizeName(FAMILY)).toBe(FAMILY);
+    expect(graphemeLength(sanitizeName(FAMILY))).toBe(1);
+  });
+
+  it("keeps a couple-with-heart sequence intact through its variation selector", () => {
+    expect(sanitizeName(COUPLE)).toBe(COUPLE);
+    expect(graphemeLength(sanitizeName(COUPLE))).toBe(1);
+  });
+
+  it("survives the full prepare pipeline without losing its joiners", () => {
+    expect(truncateToGraphemes(sanitizeName(FAMILY), MAX_NAME_GRAPHEMES)).toBe(FAMILY);
+  });
+
+  it("still strips a joiner that is not joining two pictographs", () => {
+    expect(sanitizeName("דו‍ר")).toBe("דור");
+  });
+
+  it("still strips bidi overrides, which are what the Cf strip is actually for", () => {
+    for (const hostile of ["‮", "‎", "⁦", "⁩", "​", "﻿"]) {
+      expect(sanitizeName(`דור${hostile}`)).toBe("דור");
+    }
+  });
+
+  it("collapses a joiner-padded lookalike onto the name it imitates", () => {
+    // Otherwise an invisible joiner would smuggle a visually identical twin
+    // past D-07's collision check and two "דור" would sit in the roster.
+    expect(normalizeForCompare("דו‍ר")).toBe(normalizeForCompare("דור"));
+  });
+});
