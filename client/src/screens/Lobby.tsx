@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { CLIENT_EVENTS, SERVER_EVENTS, type LobbySnapshot, type ProtocolError } from "@shared/protocol.js";
 import { HEBREW_UI } from "@shared/messages.js";
 import { getSocket } from "../socket/connection";
-import { graphemesRemaining } from "../names/nameInput";
+import { graphemesRemaining, clampForInput } from "../names/nameInput";
 
 type LobbyProps = {
   snapshot: LobbySnapshot;
@@ -48,8 +48,9 @@ export function Lobby({ snapshot }: LobbyProps) {
     <main>
       <h1>חדר {snapshot.roomCode}</h1>
       <p>
-        {snapshot.readyCount} / {snapshot.players.length} מחוברים
+        {HEBREW_UI.playersInRoom}: {snapshot.readyCount} / {snapshot.players.length} מחוברים
       </p>
+      {!snapshot.canStart && <p>{HEBREW_UI.waitingForPlayers}</p>}
       <ul>
         {snapshot.players.map((player) => (
           <li key={player.id}>
@@ -66,7 +67,7 @@ export function Lobby({ snapshot }: LobbyProps) {
             <input
               type="text"
               value={renameValue}
-              onChange={(e) => setRenameValue(e.target.value)}
+              onChange={(e) => setRenameValue(clampForInput(e.target.value))}
               placeholder={HEBREW_UI.namePlaceholder}
               autoComplete="off"
             />
