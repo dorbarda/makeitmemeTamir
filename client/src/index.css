@@ -193,3 +193,36 @@ li {
   border-color: #1f6feb;
   color: #fff;
 }
+
+/* D-13/D-14 — the writing phase panel. Mobile-first, no fixed widths; the
+   textarea inherits the root 16px floor (iOS zoom) from the global
+   input/button rule below. */
+.writing-panel {
+  margin: 1rem 0;
+}
+
+.writing-panel textarea {
+  font: inherit;
+  width: 100%;
+  min-height: 4.5rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.5rem;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  resize: vertical;
+}
+
+/* The at-a-glance count ("8 מתוך 12 שלחו", D-13) — no letter-spacing on
+   Hebrew text, per project convention. */
+.writing-progress {
+  font-weight: 600;
+  word-spacing: 0.1em;
+}
+
+/* A positive marker only, never a mark against the players who haven't sent
+   yet (D-13) — no negative color, just presence. */
+.roster-check {
+  color: #16a34a;
+  font-weight: 700;
+}

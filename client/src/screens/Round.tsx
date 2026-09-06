@@ -1,6 +1,7 @@
 import { HEBREW_UI } from "@shared/messages.js";
 import type { LobbySnapshot, RoomPhase } from "@shared/protocol.js";
 import { Countdown } from "../components/Countdown";
+import { WritingPanel } from "./round/WritingPanel";
 
 type RoundProps = {
   snapshot: LobbySnapshot;
@@ -21,9 +22,9 @@ const PHASE_HEADINGS: Record<Exclude<RoomPhase, "LOBBY">, string> = {
  * snapshot says — no client-side phase inference. The countdown is mounted
  * unconditionally at the top so it is always visible (D-15) rather than
  * appearing only on some screens; it renders nothing itself when
- * `deadlineAt` is null. Phase-specific content (the caption form, the
- * rating step) mounts at the two commented points below in plans 02-03 and
- * 02-04.
+ * `deadlineAt` is null. `WritingPanel` mounts only while `phase ===
+ * "WRITING"` (plan 02-03); the rating step mounts at the commented point
+ * below in plan 02-04.
  */
 export function Round({ snapshot }: RoundProps) {
   const heading = snapshot.phase === "LOBBY" ? "" : PHASE_HEADINGS[snapshot.phase];
@@ -39,7 +40,7 @@ export function Round({ snapshot }: RoundProps) {
         </p>
       )}
 
-      {/* Mount point: writing panel (caption form + progress) — plan 02-03 */}
+      {snapshot.phase === "WRITING" && <WritingPanel snapshot={snapshot} />}
 
       {/* Mount point: rating panel (one meme at a time) — plan 02-04 */}
 
