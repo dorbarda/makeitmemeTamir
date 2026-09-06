@@ -4,6 +4,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Server as SocketIOServer } from "socket.io";
 import { PING_INTERVAL_MS, PING_TIMEOUT_MS } from "./config.js";
+import { RoomManager } from "./rooms/RoomManager.js";
+import { SessionRegistry } from "./players/SessionRegistry.js";
+import { createAuthMiddleware } from "./socket/authMiddleware.js";
+import { registerHandlers } from "./socket/handlers.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CLIENT_DIST = path.resolve(__dirname, "../../client/dist");
@@ -34,8 +38,13 @@ export function createServer() {
     connectionStateRecovery: {},
   });
 
-  // Stub — Task 3 wires the real RoomManager, auth middleware and handlers.
-  const roomManager = null as unknown;
+  const roomManager = new RoomManager();
+  const sessions = new SessionRegistry();
+
+  io.use(createAuthMiddleware(sessions));
+  io.on("connection", (socket) => {
+    registerHandlers(io, socket, { roomManager, sessions });
+  });
 
   return { httpServer, io, roomManager };
 }
