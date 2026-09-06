@@ -44,7 +44,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. A player can join by tapping a shared link (or entering the 4-digit room code) and a display name, with no signup or password, and a duplicate display name is automatically numbered rather than rejected, so nobody is ever blocked from joining
   3. Every player who has joined appears in a live-updating roster visible to everyone else in the room
   4. A player who locks their phone, refreshes the page, or briefly disconnects rejoins the same room afterward with their same name and score intact — verified on a real phone, not just a browser tab
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Greenfield scaffold, shared wire contract, and the end-to-end create/join/roster/reconnect tracer slice
+- [ ] 01-02-PLAN.md — Free-text names: grapheme-aware limits, auto-numbered duplicates, lobby rename, capacity cap
+- [ ] 01-03-PLAN.md — Ways in: WhatsApp join link, QR code, manual 4-digit fallback, and the live lobby screen
+- [ ] 01-04-PLAN.md — Resilience: grace-delayed roster fade, automatic host transfer, and full resync on every return
 
 ### Phase 2: Server-Authoritative Round Engine
 **Goal**: The server is the sole authority over game phase and timing, so no single player's actions, absence, or slow connection can freeze the room for everyone else. Built and proven with placeholder round content before real photos or scoring exist, isolating state-machine correctness from gameplay complexity.
@@ -141,7 +147,7 @@ natural requirement-coverage position.)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Room, Session & Reconnect Foundation | 0/TBD | Not started | - |
+| 1. Room, Session & Reconnect Foundation | 0/4 | Planned | - |
 | 2. Server-Authoritative Round Engine | 0/TBD | Not started | - |
 | 3. Core Loop Checkpoint (Real Phones, End-to-End) | 0/TBD | Not started | - |
 | 4. Full Round, Rating & Scoring Completion | 0/TBD | Not started | - |
