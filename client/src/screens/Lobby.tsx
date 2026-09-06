@@ -105,7 +105,7 @@ export function Lobby({ snapshot }: LobbyProps) {
         {snapshot.players.map((player) => (
           <li key={player.id} className={player.connected ? undefined : "player--disconnected"}>
             {player.name}
-            {!player.connected && " (מנותק/ת)"}
+            {!player.connected && ` ${HEBREW_UI.disconnectedTag}`}
           </li>
         ))}
       </ul>

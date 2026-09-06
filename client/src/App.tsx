@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactElement } from "react";
+import { HEBREW_UI } from "@shared/messages.js";
 import { useSnapshot } from "./state/gameStore";
+import { useConnected } from "./socket/connection";
 import { Home } from "./screens/Home";
 import { Join } from "./screens/Join";
 import { JoinByCode } from "./screens/JoinByCode";
@@ -19,6 +21,7 @@ function readJoinCode(pathname: string): string | undefined {
  */
 function App() {
   const snapshot = useSnapshot();
+  const connected = useConnected();
   const [pathname, setPathname] = useState(window.location.pathname);
 
   useEffect(() => {
@@ -38,24 +41,37 @@ function App() {
 
   // A returning player is a pure function of the snapshot the server sent —
   // no interstitial, no extra tap, regardless of which route they landed on.
+  let screen: ReactElement;
   if (snapshot) {
-    return <Lobby snapshot={snapshot} />;
+    screen = <Lobby snapshot={snapshot} />;
+  } else {
+    const joinCode = readJoinCode(pathname);
+    if (joinCode) {
+      screen = <Join roomCode={joinCode} />;
+    } else if (pathname.replace(/\/+$/, "") === "/join") {
+      screen = (
+        <JoinByCode
+          onJoined={(roomCode) => navigate(`/join/${roomCode}`, "replace")}
+        />
+      );
+    } else {
+      screen = <Home onHaveCode={() => navigate("/join")} />;
+    }
   }
 
-  const joinCode = readJoinCode(pathname);
-  if (joinCode) {
-    return <Join roomCode={joinCode} />;
-  }
-
-  if (pathname.replace(/\/+$/, "") === "/join") {
-    return (
-      <JoinByCode
-        onJoined={(roomCode) => navigate(`/join/${roomCode}`, "replace")}
-      />
-    );
-  }
-
-  return <Home onHaveCode={() => navigate("/join")} />;
+  return (
+    <>
+      {screen}
+      {/* Overlays, never unmounts, the current screen (D-14) — the roster or
+          form underneath stays visible and picks up the incoming snapshot
+          the instant the connection returns, with nothing to dismiss. */}
+      {!connected && (
+        <div className="reconnect-overlay" role="status">
+          {HEBREW_UI.reconnecting}
+        </div>
+      )}
+    </>
+  );
 }
 
 export default App;

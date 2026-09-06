@@ -145,7 +145,18 @@ export function registerHandlers(io: Server, socket: Socket, deps: HandlerDeps):
 
   socket.on(CLIENT_EVENTS.rejoin, () => {
     if (!data.playerId || !data.roomCode) {
-      emitError(socket, { code: "NOT_IN_ROOM", messageHe: HEBREW_ERRORS.NOT_IN_ROOM });
+      // No known binding for this socket's token (missing, expired, or a
+      // token this server never issued — T-01-17). Never an error and never
+      // a match against someone else's identity: the client has nothing to
+      // resync into yet, so a fresh, unbound token is issued for it to carry
+      // into whatever create-room/join-room it does next. create-room and
+      // join-room already mint their own token unconditionally, so this
+      // never collides with — or is required by — that path; it only means
+      // a bare `rejoin` from an unrecognised token gets a normal reply
+      // instead of a swallowed error nobody was listening for.
+      const token = sessions.issue();
+      data.token = token;
+      socket.emit(SERVER_EVENTS.session, { token, playerId: "" });
       return;
     }
 

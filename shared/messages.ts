@@ -33,4 +33,8 @@ export const HEBREW_UI = {
   scanToJoin: "או סרקו את הקוד",
   connectedCount: "מחוברים",
   readyToStart: "אפשר להתחיל",
+  // plan 01-04 — reconnect grace, host transfer
+  reconnecting: "מתחבר מחדש...",
+  hostChanged: "המנחה התחלף",
+  disconnectedTag: "(מנותק/ת)",
 };

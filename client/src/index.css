@@ -123,3 +123,19 @@ li {
 .player--disconnected {
   opacity: 0.55;
 }
+
+/* Overlays the current screen without unmounting it (D-14) — a fixed banner
+   near the top of the viewport, relative width and capped so it never
+   overflows a narrow phone, and never blocking taps on whatever is
+   underneath once the player can see through it again. */
+.reconnect-overlay {
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  z-index: 10;
+  padding: 0.625rem 1rem;
+  text-align: center;
+  font-weight: 600;
+  background: #1f2937;
+  color: #fff;
+}
