@@ -3,9 +3,10 @@
 ## What This Is
 
 A Hebrew-language, phone-first party game for Tamir's bachelor party. Each round every
-player sees a photo of Tamir, writes a funny Hebrew caption for it, and then everyone votes
-for the funniest caption. Points accumulate across rounds, a winner is crowned, and the
-funniest memes of the night can be downloaded and kept.
+player sees a photo of Tamir, writes a funny Hebrew caption for their own photo. The resulting memes are then
+revealed one at a time and every player rates the meme on screen from 1 to 3 — its author
+sits out. Points accumulate across rounds, a winner is crowned, and the funniest memes of
+the night can be downloaded and kept.
 
 It is built for one specific event: roughly 10-15 friends, all in the same room, each on
 their own phone, joining a private room with a short code.
@@ -13,7 +14,7 @@ their own phone, joining a private room with a short code.
 ## Core Value
 
 Ten-plus friends in the same room can all join on their phones and play a full game of
-write-a-caption-and-vote in Hebrew without anyone getting stuck, disconnected, or confused.
+write-a-caption-and-rate in Hebrew without anyone getting stuck, disconnected, or confused.
 
 ## Requirements
 
