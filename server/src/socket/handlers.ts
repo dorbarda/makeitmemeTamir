@@ -1,6 +1,7 @@
 import type { Server, Socket } from "socket.io";
 import { CLIENT_EVENTS, SERVER_EVENTS, type ProtocolError } from "@shared/protocol.js";
 import { HEBREW_ERRORS } from "@shared/messages.js";
+import { RATE_LIMIT_MAX_INTENTS, RATE_LIMIT_WINDOW_MS } from "../config.js";
 import { MAX_NAME_GRAPHEMES, sanitizeName, truncateToGraphemes } from "../names/nameValidation.js";
 import type { RoomManager } from "../rooms/RoomManager.js";
 import type { SessionRegistry } from "../players/SessionRegistry.js";
@@ -26,11 +27,34 @@ function prepareName(raw: string): string {
   return truncateToGraphemes(sanitizeName(raw ?? ""), MAX_NAME_GRAPHEMES);
 }
 
+/**
+ * Per-socket sliding-window guard applied only to create-room/join-room.
+ * Deliberately excludes rejoin/request-resync so a phone reconnecting
+ * repeatedly on a bad network is never locked out of its own room (T-01-09).
+ */
+function isRateLimited(data: SocketData): boolean {
+  const now = Date.now();
+  const timestamps = (data.roomIntentTimestamps ??= []);
+  while (timestamps.length > 0 && now - timestamps[0] > RATE_LIMIT_WINDOW_MS) {
+    timestamps.shift();
+  }
+  if (timestamps.length >= RATE_LIMIT_MAX_INTENTS) {
+    return true;
+  }
+  timestamps.push(now);
+  return false;
+}
+
 export function registerHandlers(io: Server, socket: Socket, deps: HandlerDeps): void {
   const { roomManager, sessions } = deps;
   const data = socket.data as SocketData;
 
   socket.on(CLIENT_EVENTS.createRoom, ({ name }: { name: string }) => {
+    if (isRateLimited(data)) {
+      emitError(socket, { code: "RATE_LIMITED", messageHe: HEBREW_ERRORS.RATE_LIMITED });
+      return;
+    }
+
     const preparedName = prepareName(name);
     if (preparedName.length === 0) {
       emitError(socket, { code: "NAME_REQUIRED", messageHe: HEBREW_ERRORS.NAME_REQUIRED });
@@ -52,9 +76,22 @@ export function registerHandlers(io: Server, socket: Socket, deps: HandlerDeps):
   });
 
   socket.on(CLIENT_EVENTS.joinRoom, ({ roomCode, name }: { roomCode: string; name: string }) => {
+    if (isRateLimited(data)) {
+      emitError(socket, { code: "RATE_LIMITED", messageHe: HEBREW_ERRORS.RATE_LIMITED });
+      return;
+    }
+
     const room = roomManager.findRoom(roomCode);
     if (!room) {
       emitError(socket, { code: "ROOM_NOT_FOUND", messageHe: HEBREW_ERRORS.ROOM_NOT_FOUND });
+      return;
+    }
+
+    // Capacity applies to new players only (D-05) — a returning player
+    // resolves through `rejoin`, which never consults `isFull`, so someone
+    // already in a full room is never locked out of it.
+    if (room.isFull) {
+      emitError(socket, { code: "ROOM_FULL", messageHe: HEBREW_ERRORS.ROOM_FULL });
       return;
     }
 

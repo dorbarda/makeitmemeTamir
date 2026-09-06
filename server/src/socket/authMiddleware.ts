@@ -11,6 +11,8 @@ export type SocketData = {
   roomCode?: string;
   token?: string;
   isNewSession?: boolean;
+  /** Sliding-window timestamps for the create-room/join-room rate guard. */
+  roomIntentTimestamps?: number[];
 };
 
 /**
