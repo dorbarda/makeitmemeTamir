@@ -1,0 +1,58 @@
+{
+  "contract": "1.0.0",
+  "flavor": "core",
+  "milestone": null,
+  "phases": [
+    {
+      "number": "1",
+      "name": "Room, Session & Reconnect Foundation",
+      "status": "pending"
+    },
+    {
+      "number": "2",
+      "name": "Server-Authoritative Round Engine",
+      "status": "pending"
+    },
+    {
+      "number": "3",
+      "name": "Core Loop Checkpoint (Real Phones, End-to-End)",
+      "status": "pending"
+    },
+    {
+      "number": "4",
+      "name": "Full Round, Rating & Scoring Completion",
+      "status": "pending"
+    },
+    {
+      "number": "5",
+      "name": "Hebrew RTL Meme Compositor & Souvenir",
+      "status": "pending"
+    },
+    {
+      "number": "6",
+      "name": "Host Controls & RTL Interface Hardening",
+      "status": "pending"
+    },
+    {
+      "number": "7",
+      "name": "Deployment & Hosting",
+      "status": "pending"
+    },
+    {
+      "number": "8",
+      "name": "Load & Capacity Verification",
+      "status": "pending"
+    },
+    {
+      "number": "9",
+      "name": "Real-Device Rehearsal",
+      "status": "pending"
+    }
+  ],
+  "next": {
+    "command": "/gsd:progress --next",
+    "label": "Advance to the next step",
+    "reason": "Phase 1 of 9 · 0% · executing"
+  },
+  "updated_at": "2026-09-06T04:04:59.720Z"
+}
