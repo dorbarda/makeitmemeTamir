@@ -21,10 +21,21 @@ Run by the user on two real phones against the deployed Render service. Reported
 full, **including the screen-lock case** — the returning phone came back to the same roster with
 the same identity, and no duplicate player appeared for the other phone.
 
-**The post-unlock settling time was NOT captured as a number.** Plan 01-04 needs it to replace the
-two `[ASSUMED]` grace-delay constants (`ROSTER_FADE_GRACE_MS`, `HOST_TRANSFER_GRACE_MS`), which are
-still theory derived from Socket.IO's ping model rather than measurement. Treat those constants as
-unvalidated until a measured figure exists. This is an open item carried into plan 01-04 Task 3.
+**Measured settling time: reported as "seems instant"** by the user on the returning phone — the
+unlocked phone was back on the correct roster with no perceptible delay.
+
+What that does and does not settle for plan 01-04:
+
+- It validates the *reconnect* path: `rejoin(roomCode, sessionToken)` plus a full state resync
+  returns a woken phone to correct state immediately. No extra delay needs designing in on that side.
+- It does NOT by itself fix `ROSTER_FADE_GRACE_MS` or `HOST_TRANSFER_GRACE_MS`. Those govern how
+  long the OTHER players wait before a vanished player is shown as gone, which is bounded by how
+  long the server takes to notice a dead socket — `PING_INTERVAL_MS` (10s) + `PING_TIMEOUT_MS` (8s),
+  so up to ~18s. An instant return means the fade grace can be tuned toward the low end without
+  risking a returning player flickering out of the roster, rather than the conservative 30s/60s
+  currently shipped.
+
+Plan 01-04 Task 3 should choose both constants deliberately against that ~18s detection window.
 
 ## Protocol contract changes
 
