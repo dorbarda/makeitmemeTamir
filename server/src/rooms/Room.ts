@@ -8,6 +8,8 @@ import {
   type RatingStepView,
   type RatingValue,
   type RoomPhase,
+  type RoundEndEntry,
+  type RoundEndView,
   type SettingsOptions,
   type SubmissionProgress,
 } from "@shared/protocol.js";
@@ -482,12 +484,15 @@ export class Room {
   /**
    * Writing has closed. Builds this round's rating rotation once, from the
    * submissions map (D-08) — a player who never submitted has no key in that
-   * map and is therefore simply absent from the rotation. If fewer than
-   * `MIN_SUBMISSIONS_TO_RATE` captions came in, one caption (or zero) cannot
-   * be meaningfully rated — its sole author is the one person barred from
-   * rating it — so the rating phase is skipped entirely and the round goes
-   * straight to its end (D-09; plan 02-05 owns that branch's own tests).
-   * Otherwise, opens the D-11 pacing beat before the first meme.
+   * map and is therefore simply absent from the rotation.
+   *
+   * D-09: if fewer than `MIN_SUBMISSIONS_TO_RATE` captions came in, the
+   * rating phase is skipped entirely — one caption (or zero) cannot be
+   * meaningfully rated, because its sole author is the one person barred
+   * from rating it, so showing a single-meme rating step would be a
+   * countdown nobody could ever act on. The round goes straight to
+   * `enterRoundEnd()` without ever entering `REVEAL_BREAK` or `RATING` for
+   * this round. Otherwise, opens the D-11 pacing beat before the first meme.
    */
   private closeWriting(): void {
     this.rotation = buildRotation(this.submissions);
@@ -632,6 +637,35 @@ export class Room {
   }
 
   /**
+   * Builds the round-end view for the round that just closed (VOTE-04's
+   * empty edge, D-10). For each step in `rotation`, in the same order the
+   * memes were shown, carries the author's id and current name, the
+   * caption, the raw rating values that step received (never a default for
+   * a silent rater), and the eligible-rater count recorded at the moment
+   * that step closed. Deliberately does NOT reduce `ratings` to a score:
+   * D-10 flagged that a meme rated while some eligible raters were away
+   * would score lower purely by bad luck of timing, and whether the answer
+   * is a sum, an average or a floor is a Phase 4 scoring decision this
+   * engine must not pre-empt — it only guarantees both numbers are exposed.
+   * A round that skipped rating (D-09) yields an empty `entries` array,
+   * never null and never a fabricated entry.
+   */
+  private buildRoundEndView(): RoundEndView {
+    const entries: RoundEndEntry[] = this.rotation.map((authorId, index) => {
+      const author = this.players.get(authorId);
+      const stepRatings = this.ratings.get(index);
+      return {
+        authorId,
+        authorName: author?.name ?? "",
+        caption: this.submissions.get(authorId) ?? "",
+        ratings: stepRatings ? [...stepRatings.values()] : [],
+        eligibleAtClose: this.eligibleAtClose.get(index) ?? 0,
+      };
+    });
+    return { entries };
+  }
+
+  /**
    * Clears every pending timer this room owns. Must be called wherever a
    * room is torn down, so a fade, host-transfer, or phase-timer callback
    * scheduled before teardown can never fire against a room that no longer
@@ -727,9 +761,11 @@ export class Room {
       // this with the player's actual assigned image.
       yourPlaceholderId: inWriting && you ? you.joinedAt + 1 : null,
       ratingStep,
-      // Placeholder this plan does not fill — plan 02-05 owns the real data
-      // (see the field comment in shared/protocol.ts).
-      roundEnd: null,
+      // T-02-20 — populated only for ROUND_END and GAME_END, so the full
+      // caption/rating set for the round never travels early (D-14's
+      // discipline extended to the round-end reveal).
+      roundEnd:
+        this.phase === "ROUND_END" || this.phase === "GAME_END" ? this.buildRoundEndView() : null,
     };
   }
 
