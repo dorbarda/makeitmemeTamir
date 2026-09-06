@@ -257,3 +257,21 @@ li {
   font-weight: 700;
   font-size: 1.25rem;
 }
+
+/* VOTE-04/D-10 — the round-end and game-end screens. Mobile-first, no fixed
+   widths, same shape as .writing-panel/.rating-panel. */
+.round-end-panel {
+  margin: 1rem 0;
+}
+
+.round-end-panel ul {
+  margin: 0;
+}
+
+/* Long Hebrew captions wrap rather than widening the layout (no fixed
+   pixel widths anywhere in this file, per project convention); no
+   letter-spacing on the Hebrew text. */
+.round-end-entry {
+  overflow-wrap: break-word;
+}
+

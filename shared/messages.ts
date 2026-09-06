@@ -80,4 +80,7 @@ export const HEBREW_UI = {
   ratingTierPlaceholder1: "1",
   ratingTierPlaceholder2: "2",
   ratingTierPlaceholder3: "3",
+  // plan 02-05 — round-end / game-end (D-09's skip line; ranking and
+  // scoring are explicitly Phase 4, see RoundEndPanel.tsx)
+  roundEndTooFewCaptions: "לא הגיעו מספיק כיתובים כדי לדרג בסיבוב הזה",
 };

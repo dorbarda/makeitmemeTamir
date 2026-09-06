@@ -3,6 +3,7 @@ import type { LobbySnapshot, RoomPhase } from "@shared/protocol.js";
 import { Countdown } from "../components/Countdown";
 import { WritingPanel } from "./round/WritingPanel";
 import { RatingPanel } from "./round/RatingPanel";
+import { RoundEndPanel } from "./round/RoundEndPanel";
 
 type RoundProps = {
   snapshot: LobbySnapshot;
@@ -25,9 +26,12 @@ const PHASE_HEADINGS: Record<Exclude<RoomPhase, "LOBBY">, string> = {
  * appearing only on some screens; it renders nothing itself when
  * `deadlineAt` is null. `WritingPanel` mounts only while `phase ===
  * "WRITING"` (plan 02-03); `RatingPanel` mounts only while `phase ===
- * "RATING"` (plan 02-04). During `REVEAL_BREAK` neither panel mounts — no
+ * "RATING"` (plan 02-04); `RoundEndPanel` mounts for both `"ROUND_END"` and
+ * `"GAME_END"` (plan 02-05). During `REVEAL_BREAK` no panel mounts — no
  * meme, no caption, nothing to tap during the break — only the heading and
- * countdown are shown.
+ * countdown are shown. The countdown already renders nothing once
+ * `deadlineAt` is null, so `GAME_END`'s terminal, timer-less state needs no
+ * extra branch here.
  */
 export function Round({ snapshot }: RoundProps) {
   const heading = snapshot.phase === "LOBBY" ? "" : PHASE_HEADINGS[snapshot.phase];
@@ -45,6 +49,9 @@ export function Round({ snapshot }: RoundProps) {
 
       {snapshot.phase === "WRITING" && <WritingPanel snapshot={snapshot} />}
       {snapshot.phase === "RATING" && <RatingPanel snapshot={snapshot} />}
+      {(snapshot.phase === "ROUND_END" || snapshot.phase === "GAME_END") && (
+        <RoundEndPanel snapshot={snapshot} />
+      )}
 
       <ul>
         {snapshot.players.map((player) => (
