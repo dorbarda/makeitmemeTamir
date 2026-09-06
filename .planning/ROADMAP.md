@@ -24,7 +24,7 @@ the scripted load test never be merged with the real-guest-adjacent rehearsal.
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Room, Session & Reconnect Foundation** - Players can create/join a room by code or QR with a unique name, see who's in the room live, and survive a phone lock or refresh without losing identity or score
+- [x] **Phase 1: Room, Session & Reconnect Foundation** - Players can create/join a room by code or QR with a unique name, see who's in the room live, and survive a phone lock or refresh without losing identity or score
 - [ ] **Phase 2: Server-Authoritative Round Engine** - The server owns every phase's clock so the game never freezes on a missing or slow player
 - [ ] **Phase 3: Core Loop Checkpoint (Real Phones, End-to-End)** - A full round of write-a-caption, rate memes one-at-a-time, and score is proven working on real phones before deeper features are built
 - [ ] **Phase 4: Full Round, Rating & Scoring Completion** - The complete round loop ships: no-repeat photos, photo swap, cannot-rate-own-meme with hidden ratings until each meme's step closes, ranked round results, running score totals, final winner, and best-of-night
