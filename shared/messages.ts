@@ -21,4 +21,16 @@ export const HEBREW_UI = {
   renameButton: "שינוי שם",
   waitingForPlayers: "צריך לפחות 3 שחקנים כדי להתחיל",
   playersInRoom: "שחקנים בחדר",
+  // plan 01-03 — home / deep-link join / manual code entry
+  codePlaceholder: "קוד החדר",
+  enterCodeTitle: "הכניסו את קוד החדר",
+  haveACode: "יש לי קוד חדר",
+  joiningRoomPrefix: "הצטרפות לחדר",
+  // plan 01-03 — lobby presentation, share, QR
+  roomCodeLabel: "קוד החדר",
+  shareButton: "שליחת הקישור",
+  copiedToast: "הקישור הועתק",
+  scanToJoin: "או סרקו את הקוד",
+  connectedCount: "מחוברים",
+  readyToStart: "אפשר להתחיל",
 };

@@ -33,7 +33,9 @@ export function Join({ roomCode }: JoinProps) {
 
   return (
     <main>
-      <h1>הצטרפות לחדר {roomCode}</h1>
+      <h1>
+        {HEBREW_UI.joiningRoomPrefix} {roomCode}
+      </h1>
       <form onSubmit={handleJoin}>
         <label>
           השם שלך

@@ -4,7 +4,13 @@ import { HEBREW_ERRORS, HEBREW_UI } from "@shared/messages.js";
 import { getSocket } from "../socket/connection";
 import { graphemesRemaining, clampForInput } from "../names/nameInput";
 
-export function Home() {
+type HomeProps = {
+  /** Navigates to the manual 4-digit fallback (D-04) for someone who opened
+   * the bare origin but has a code to type rather than a link to tap. */
+  onHaveCode: () => void;
+};
+
+export function Home({ onHaveCode }: HomeProps) {
   const [name, setName] = useState("");
   const [error, setError] = useState<string | undefined>(undefined);
 
@@ -45,6 +51,9 @@ export function Home() {
         <button type="submit">{HEBREW_UI.createButton}</button>
         {error && <p role="alert">{error}</p>}
       </form>
+      <button type="button" onClick={onHaveCode}>
+        {HEBREW_UI.haveACode}
+      </button>
     </main>
   );
 }
