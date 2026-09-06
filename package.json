@@ -10,6 +10,10 @@
     "dev:client": "npm --prefix client run dev",
     "build": "npm --prefix server install --include=dev && npm --prefix client install --include=dev && npm --prefix client run build",
     "test": "npm --prefix server run test -- --run && npm --prefix client run test -- --run",
-    "start": "npm --prefix server run start"
+    "start": "npm --prefix server run start",
+    "test:browser": "npm --prefix client run build && node e2e/browser-smoke.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.63.0"
   }
 }
