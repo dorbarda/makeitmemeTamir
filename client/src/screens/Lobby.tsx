@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { CLIENT_EVENTS, SERVER_EVENTS, type LobbySnapshot, type ProtocolError } from "@shared/protocol.js";
-import { HEBREW_UI } from "@shared/messages.js";
+import { HEBREW_ERRORS, HEBREW_UI } from "@shared/messages.js";
 import { getSocket } from "../socket/connection";
 import { graphemesRemaining, clampForInput } from "../names/nameInput";
 
@@ -26,7 +26,9 @@ export function Lobby({ snapshot }: LobbyProps) {
 
     const socket = getSocket();
     const onError = (err: ProtocolError) => {
-      setRenameError(err.messageHe);
+      // Looked up locally rather than trusting err.messageHe verbatim, so
+      // the player always sees this client build's current Hebrew wording.
+      setRenameError(HEBREW_ERRORS[err.code]);
       cleanup();
     };
     const onState = () => {
