@@ -1,0 +1,14 @@
+{
+  "name": "tamir-meme-party",
+  "private": true,
+  "version": "0.0.0",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "build": "npm --prefix client run build",
+    "test": "npm --prefix server run test -- --run && npm --prefix client run test -- --run"
+  }
+}
