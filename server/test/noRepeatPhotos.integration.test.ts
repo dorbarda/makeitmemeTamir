@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { Room } from "../src/rooms/Room.js";
 import { BETWEEN_PHASES_MS } from "../src/config.js";
 import { PHOTO_FILENAMES } from "../src/rooms/photos.js";
+import { fakeMeme } from "./fixtures/meme.js";
 
 /**
  * Hardening for ROUND-02/ROUND-06 outside the common case: a single player
@@ -69,7 +70,7 @@ describe("no-repeat photos across more rounds than photos, and photo swap edge c
         sawRepeatAfterExhaustion = true;
       }
 
-      room.submitCaption(target.id, `caption round ${round}`);
+      room.submitCaption(target.id, fakeMeme(`round-${round}`));
 
       // Directly off the room's own public field (ROUND-02) — the snapshot
       // used by the NEXT iteration's "start of round" check.
@@ -126,7 +127,7 @@ describe("no-repeat photos across more rounds than photos, and photo swap edge c
     const players = startWithPlayers(3);
     const target = players[0];
 
-    expect(room.submitCaption(target.id, "caption").ok).toBe(true);
+    expect(room.submitCaption(target.id, fakeMeme("caption")).ok).toBe(true);
     expect(room.swapPhoto(target.id)).toEqual({ ok: false, error: "ALREADY_SUBMITTED" });
   });
 });

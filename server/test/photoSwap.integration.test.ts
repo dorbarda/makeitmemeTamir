@@ -7,6 +7,7 @@ import {
 } from "@shared/protocol.js";
 import { startTestServer, connectClient, waitFor, type TestServer } from "./setup.js";
 import { PHOTO_FILENAMES } from "../src/rooms/photos.js";
+import { fakeMeme } from "./fixtures/meme.js";
 
 /**
  * The tracer's own real-socket proof for ROUND-06/D-01/D-02 (the one-time
@@ -142,11 +143,11 @@ describe("photo swap end to end — instant, one-time, locks on submit, and real
       // (4) — host and b submit captions; c never submits (clears
       // MIN_SUBMISSIONS_TO_RATE with exactly two submitters).
       const bOnHostSubmit = waitFor<LobbySnapshot>(b, SERVER_EVENTS.state);
-      host.emit(CLIENT_EVENTS.submitCaption, { text: "כיתוב של המנחה" });
+      host.emit(CLIENT_EVENTS.submitCaption, { meme: fakeMeme("host") });
       await bOnHostSubmit;
 
       const hostOnBSubmit = waitFor<LobbySnapshot>(host, SERVER_EVENTS.state);
-      b.emit(CLIENT_EVENTS.submitCaption, { text: "כיתוב של בי" });
+      b.emit(CLIENT_EVENTS.submitCaption, { meme: fakeMeme("b") });
       await hostOnBSubmit;
 
       // Writing does not collapse early (c never submits) — wait for it to

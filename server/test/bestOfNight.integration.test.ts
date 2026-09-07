@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { Room } from "../src/rooms/Room.js";
 import { BETWEEN_MEMES_MS, BETWEEN_PHASES_MS } from "../src/config.js";
 import type { RatingValue } from "@shared/protocol.js";
+import { fakeMeme } from "./fixtures/meme.js";
 
 /**
  * Hardening for the winner screen and the best-of-the-night list outside the
@@ -46,7 +47,7 @@ describe("best-of-the-night and game-end winners hardening (SCORE-04, MEME-02, D
    */
   function playRound(authorIds: string[], ratersByStep: Array<Array<[string, RatingValue]>>) {
     for (const id of authorIds) {
-      room.submitCaption(id, `caption-${id}`);
+      room.submitCaption(id, fakeMeme(id));
     }
     vi.advanceTimersByTime(room.settings.writingSeconds * 1000);
     expect(room.phase).toBe("REVEAL_BREAK");

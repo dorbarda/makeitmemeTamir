@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { CLIENT_EVENTS, SERVER_EVENTS, type LobbySnapshot } from "@shared/protocol.js";
 import { startTestServer, connectClient, waitFor, type TestServer } from "./setup.js";
+import { fakeMeme } from "./fixtures/meme.js";
 
 // Real transport, real timers throughout — socket.io's own ping timers would
 // be faked along with the room's if fake timers were mixed in here (the same
@@ -54,10 +55,9 @@ describe("rating privacy — individual ratings hidden until close (VOTE-05), au
   // The exact nine-key whitelist RatingStepView has always carried — no
   // per-rater map, no individual rating value, ever.
   const RATING_STEP_KEYS = [
-    "caption",
     "eligibleCount",
     "index",
-    "photoUrl",
+    "meme",
     "ratedCount",
     "total",
     "youAreAuthor",
@@ -115,11 +115,11 @@ describe("rating privacy — individual ratings hidden until close (VOTE-05), au
 
       // Host and b submit distinct captions; c never submits.
       const bOnHostSubmit = waitFor<LobbySnapshot>(b, SERVER_EVENTS.state);
-      host.emit(CLIENT_EVENTS.submitCaption, { text: "כיתוב של המנחה" });
+      host.emit(CLIENT_EVENTS.submitCaption, { meme: fakeMeme("host") });
       await bOnHostSubmit;
 
       const hostOnBSubmit = waitFor<LobbySnapshot>(host, SERVER_EVENTS.state);
-      b.emit(CLIENT_EVENTS.submitCaption, { text: "כיתוב של בי" });
+      b.emit(CLIENT_EVENTS.submitCaption, { meme: fakeMeme("b") });
       await hostOnBSubmit;
 
       // Reach step 0 — capture every player's own snapshot at the exact

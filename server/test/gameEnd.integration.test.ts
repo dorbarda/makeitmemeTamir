@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { CLIENT_EVENTS, SERVER_EVENTS, type LobbySnapshot } from "@shared/protocol.js";
 import { startTestServer, connectClient, waitFor, type TestServer } from "./setup.js";
+import { fakeMeme } from "./fixtures/meme.js";
 
 /**
  * Real transport, real timers — the end-to-end proof (SCORE-04/D-03,
@@ -98,34 +99,33 @@ describe("a real game's winner(s) and best-of-the-night reach the client at GAME
     const [hostAfterStart] = await Promise.all([hostOnStart, bOnStart, cOnStart]);
     expect(hostAfterStart.phase).toBe("WRITING");
 
-    // Host and b submit distinct captions; c never submits — clears
+    // Host and b submit distinct memes; c never submits — clears
     // MIN_SUBMISSIONS_TO_RATE (2) with exactly 2 submitters (D-08).
-    const hostCaption = "כיתוב של המנחה";
-    const bCaption = "כיתוב של בי";
-    const captionByPlayerId = new Map<string, string>([
-      [hostPlayerId, hostCaption],
-      [bPlayerId, bCaption],
+    const hostMeme = fakeMeme("host");
+    const bMeme = fakeMeme("b");
+    const memeByPlayerId = new Map<string, string>([
+      [hostPlayerId, hostMeme],
+      [bPlayerId, bMeme],
     ]);
 
     const bOnHostSubmit = waitFor<LobbySnapshot>(b, SERVER_EVENTS.state);
-    host.emit(CLIENT_EVENTS.submitCaption, { text: hostCaption });
+    host.emit(CLIENT_EVENTS.submitCaption, { meme: hostMeme });
     await bOnHostSubmit;
 
     const hostOnBSubmit = waitFor<LobbySnapshot>(host, SERVER_EVENTS.state);
-    b.emit(CLIENT_EVENTS.submitCaption, { text: bCaption });
+    b.emit(CLIENT_EVENTS.submitCaption, { meme: bMeme });
     await hostOnBSubmit;
 
     // Step 0: identify its real author id from host's own `youAreAuthor`
     // flag (host or b is definitely the author, since only they submitted).
-    // `caption`/`photoUrl` in ratingStep are the same for every viewer (the
-    // current meme is shown to everyone), so host's own snapshot already
-    // carries the real values with no need to query b's own perspective.
+    // `meme` in ratingStep is the same for every viewer (the current meme is
+    // shown to everyone), so host's own snapshot already carries the real
+    // value with no need to query b's own perspective.
     const step0 = await waitForRatingStep(host, 0);
     expect(step0.ratingStep?.total).toBe(2);
     const step0AuthorId = step0.ratingStep?.youAreAuthor ? hostPlayerId : bPlayerId;
     const step0Rater = step0.ratingStep?.youAreAuthor ? b : host;
-    const step0Caption = captionByPlayerId.get(step0AuthorId);
-    const step0PhotoUrl = step0.ratingStep?.photoUrl;
+    const step0Meme = memeByPlayerId.get(step0AuthorId);
 
     // Only ONE eligible rater actually votes for each step (the other
     // eligible rater, c, never votes) — exactly like fullLoop's own pattern
@@ -137,8 +137,7 @@ describe("a real game's winner(s) and best-of-the-night reach the client at GAME
 
     const step1AuthorId = step1.ratingStep?.youAreAuthor ? hostPlayerId : bPlayerId;
     const step1Rater = step1.ratingStep?.youAreAuthor ? b : host;
-    const step1Caption = captionByPlayerId.get(step1AuthorId);
-    const step1PhotoUrl = step1.ratingStep?.photoUrl;
+    const step1Meme = memeByPlayerId.get(step1AuthorId);
 
     step1Rater.emit(CLIENT_EVENTS.submitRating, { stepIndex: 1, value: 1 });
 
@@ -169,15 +168,13 @@ describe("a real game's winner(s) and best-of-the-night reach the client at GAME
     expect(gameEnd!.bestOfNight[0]).toMatchObject({
       authorId: step0AuthorId,
       authorName: step0AuthorName,
-      caption: step0Caption,
-      photoUrl: step0PhotoUrl,
+      meme: step0Meme,
       score: 3,
     });
     expect(gameEnd!.bestOfNight[1]).toMatchObject({
       authorId: step1AuthorId,
       authorName: step1AuthorName,
-      caption: step1Caption,
-      photoUrl: step1PhotoUrl,
+      meme: step1Meme,
       score: 1,
     });
 

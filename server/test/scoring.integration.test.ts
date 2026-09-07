@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { Room } from "../src/rooms/Room.js";
 import { BETWEEN_MEMES_MS, BETWEEN_PHASES_MS } from "../src/config.js";
+import { fakeMeme } from "./fixtures/meme.js";
 
 /**
  * Hardening for SCORE-01/SCORE-03/D-01 outside the common case: a late
@@ -53,8 +54,8 @@ describe("scoring and photo-assignment hardening (SCORE-01, SCORE-03, D-01, D-09
     // the documented pitfall); rotation is [p0, p1]. Only step 0 (p0's meme)
     // is rated, by p2, with a known value — step 1 (p1's meme) closes
     // unrated, contributing 0 to p1 for this round.
-    room.submitCaption(p0.id, "round1 p0");
-    room.submitCaption(p1.id, "round1 p1");
+    room.submitCaption(p0.id, fakeMeme("round1-p0"));
+    room.submitCaption(p1.id, fakeMeme("round1-p1"));
     vi.advanceTimersByTime(room.settings.writingSeconds * 1000); // -> REVEAL_BREAK step 0
     vi.advanceTimersByTime(BETWEEN_PHASES_MS); // -> RATING step 0
     expect(room.phase).toBe("RATING");
@@ -83,8 +84,8 @@ describe("scoring and photo-assignment hardening (SCORE-01, SCORE-03, D-01, D-09
     // Round 2: p0 and p2 submit; rotation is [p0, p2]. Rate step 0 (p0's
     // meme again) with a different known value from p1, confirming p0's
     // total becomes the SUM of both rounds' contributions.
-    room.submitCaption(p0.id, "round2 p0");
-    room.submitCaption(p2.id, "round2 p2");
+    room.submitCaption(p0.id, fakeMeme("round2-p0"));
+    room.submitCaption(p2.id, fakeMeme("round2-p2"));
     vi.advanceTimersByTime(room.settings.writingSeconds * 1000); // -> REVEAL_BREAK step 0
     vi.advanceTimersByTime(BETWEEN_PHASES_MS); // -> RATING step 0
     expect(room.rotation[room.stepIndex]).toBe(p0.id);
@@ -110,7 +111,7 @@ describe("scoring and photo-assignment hardening (SCORE-01, SCORE-03, D-01, D-09
 
     // Only one submission — below MIN_SUBMISSIONS_TO_RATE (2) — so the round
     // skips rating entirely (D-09).
-    room.submitCaption(p0.id, "solo caption");
+    room.submitCaption(p0.id, fakeMeme("solo"));
 
     vi.advanceTimersByTime(room.settings.writingSeconds * 1000);
     expect(room.phase).toBe("ROUND_END");

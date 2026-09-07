@@ -6,6 +6,7 @@ import {
   type ProtocolError,
 } from "@shared/protocol.js";
 import { startTestServer, connectClient, waitFor, type TestServer } from "./setup.js";
+import { fakeMeme } from "./fixtures/meme.js";
 
 // Real transport, real timers throughout — socket.io's own ping timers would
 // be faked along with the room's if fake timers were mixed in here. Proves
@@ -57,15 +58,15 @@ describe("caption privacy — no caption text reaches another player's device du
     const [hostSnapshot] = await Promise.all([stateHostOnStart, stateBOnStart, stateCOnStart]);
     expect(hostSnapshot.phase).toBe("WRITING");
 
-    // A distinctive Hebrew string that appears nowhere else in this test's
-    // fixture data (names, error messages, etc).
-    const distinctiveCaption = "ברווז ירוק רוקד טנגו על הגג בלילה סוער";
+    // A distinctive marker that appears nowhere else in this test's fixture
+    // data (names, error messages, etc).
+    const distinctiveMeme = fakeMeme("le-marker-9f3");
 
     const bOnHostSubmit = waitFor<LobbySnapshot>(b, SERVER_EVENTS.state);
-    host.emit(CLIENT_EVENTS.submitCaption, { text: distinctiveCaption });
+    host.emit(CLIENT_EVENTS.submitCaption, { meme: distinctiveMeme });
     const snapshotB = await bOnHostSubmit;
 
-    expect(JSON.stringify(snapshotB)).not.toContain(distinctiveCaption);
+    expect(JSON.stringify(snapshotB)).not.toContain(distinctiveMeme);
     expect(snapshotB.progress?.submitted).toBe(1);
     expect(snapshotB.progress?.submittedPlayerIds).toContain(hostSnapshot.you.id);
 
@@ -103,7 +104,7 @@ describe("caption privacy — no caption text reaches another player's device du
     });
 
     const errorOnHost = waitFor<ProtocolError>(host, SERVER_EVENTS.error);
-    host.emit(CLIENT_EVENTS.submitCaption, { text: "מאוחר מדי" });
+    host.emit(CLIENT_EVENTS.submitCaption, { meme: fakeMeme() });
     const error = await errorOnHost;
     expect(error.code).toBe("WRONG_PHASE");
 

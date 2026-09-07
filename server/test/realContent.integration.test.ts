@@ -5,7 +5,8 @@ import {
   type LobbySnapshot,
 } from "@shared/protocol.js";
 import { startTestServer, connectClient, waitFor, type TestServer } from "./setup.js";
-import { PHOTO_FILENAMES, photoUrl } from "../src/rooms/photos.js";
+import { PHOTO_FILENAMES } from "../src/rooms/photos.js";
+import { fakeMeme } from "./fixtures/meme.js";
 
 /**
  * The tracer's own real-socket proof for ROUND-01, ROUND-03, VOTE-01,
@@ -111,19 +112,26 @@ describe("real content — real photos, real tier-name ratings, real scores (ROU
       // Host and b submit captions; c deliberately never submits (mirrors the
       // established two-of-three pattern that already clears
       // MIN_SUBMISSIONS_TO_RATE).
+      const hostMeme = fakeMeme("host");
+      const bMeme = fakeMeme("b");
+      const memeByPlayerId = new Map([
+        [hostPlayerId, hostMeme],
+        [bPlayerId, bMeme],
+      ]);
+
       const bOnHostSubmit = waitFor<LobbySnapshot>(b, SERVER_EVENTS.state);
-      host.emit(CLIENT_EVENTS.submitCaption, { text: "כיתוב של המנחה" });
+      host.emit(CLIENT_EVENTS.submitCaption, { meme: hostMeme });
       await bOnHostSubmit;
 
       const hostOnBSubmit = waitFor<LobbySnapshot>(host, SERVER_EVENTS.state);
-      b.emit(CLIENT_EVENTS.submitCaption, { text: "כיתוב של בי" });
+      b.emit(CLIENT_EVENTS.submitCaption, { meme: bMeme });
       await hostOnBSubmit;
 
       const hostInStep0 = await waitForRatingStepIndex(host, 0);
       expect(hostInStep0.ratingStep?.total).toBe(2);
 
       const authorId0 = hostInStep0.ratingStep?.youAreAuthor ? hostPlayerId : bPlayerId;
-      expect(hostInStep0.ratingStep?.photoUrl).toBe(photoUrl(room.photoAssignments.get(authorId0)!));
+      expect(hostInStep0.ratingStep?.meme).toBe(memeByPlayerId.get(authorId0));
 
       // c (never an author) rates step 0 with value 3.
       const cOnRate0 = waitFor<LobbySnapshot>(c, SERVER_EVENTS.state);
@@ -132,7 +140,7 @@ describe("real content — real photos, real tier-name ratings, real scores (ROU
 
       const hostInStep1 = await waitForRatingStepIndex(host, 1);
       const authorId1 = hostInStep1.ratingStep?.youAreAuthor ? hostPlayerId : bPlayerId;
-      expect(hostInStep1.ratingStep?.photoUrl).toBe(photoUrl(room.photoAssignments.get(authorId1)!));
+      expect(hostInStep1.ratingStep?.meme).toBe(memeByPlayerId.get(authorId1));
 
       // c rates step 1 with value 1.
       const cOnRate1 = waitFor<LobbySnapshot>(c, SERVER_EVENTS.state);
