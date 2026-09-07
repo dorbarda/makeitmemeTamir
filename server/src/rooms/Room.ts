@@ -91,6 +91,16 @@ export type SkipRoundOutcome =
  * distinct error code (Phase 6, LIVE-05, this plan's own prohibitions). */
 export type RemovePlayerOutcome = { ok: true } | { ok: false; error: "NOT_HOST" };
 
+/** Result of an end-game attempt — never throws, always tells the caller
+ * why (Phase 6, LIVE-06). Refuses `WRONG_PHASE` at LOBBY (nothing to end)
+ * and at GAME_END (already ended). */
+export type EndGameOutcome = { ok: true } | { ok: false; error: "NOT_HOST" | "WRONG_PHASE" };
+
+/** Result of a restart-game attempt — never throws, always tells the caller
+ * why (Phase 6, LIVE-07). Legal from any phase, including LOBBY itself as a
+ * harmless no-op reset of scores that are already 0 (D-04). */
+export type RestartGameOutcome = { ok: true } | { ok: false; error: "NOT_HOST" };
+
 // Standard, correctly-padded base64 — exactly what canvas.toBlob() ->
 // FileReader.readAsDataURL() -> stripping the "data:image/png;base64,"
 // prefix always produces (T-05-02).
@@ -932,6 +942,88 @@ export class Room {
       this.players.has(targetPlayerId)
     ) {
       this.detach(targetPlayerId);
+    }
+
+    return { ok: true };
+  }
+
+  /**
+   * Host-only "break-glass" recovery action (LIVE-06): ends the game
+   * immediately, jumping straight to the exact same GAME_END screen a
+   * normal finish produces (D-03 — `enterGameEnd()`/`buildGameEndView()` are
+   * completely unmodified by this plan, reused verbatim). Refused with
+   * `NOT_HOST` first; then `WRONG_PHASE` at LOBBY (nothing has started yet)
+   * or GAME_END (already ended) — ending a game that isn't live is
+   * meaningless. If a round is currently in progress (WRITING,
+   * REVEAL_BREAK, or RATING), that interrupted round's not-yet-applied
+   * score is discarded exactly like `skipRound` does (D-01) — a round
+   * already fully resolved into ROUND_END needs no discard, since
+   * `finishRound(false)` already ran `applyRoundScores`/`updateBestOfNight`
+   * for it; ending from ROUND_END simply jumps to GAME_END with that
+   * round's score standing exactly as it already does. `enterGameEnd()`
+   * already calls `clearPhaseTimer()` (T-06-03) — no orphaned timer can
+   * survive past GAME_END regardless of which live phase this was called
+   * from.
+   */
+  endGame(playerId: string): EndGameOutcome {
+    if (playerId !== this.hostId) {
+      return { ok: false, error: "NOT_HOST" };
+    }
+    if (this.phase === "LOBBY" || this.phase === "GAME_END") {
+      return { ok: false, error: "WRONG_PHASE" };
+    }
+
+    if (this.phase === "WRITING" || this.phase === "REVEAL_BREAK" || this.phase === "RATING") {
+      this.rotation = [];
+      this.ratings.clear();
+      this.eligibleAtClose.clear();
+    }
+
+    this.enterGameEnd();
+    return { ok: true };
+  }
+
+  /**
+   * Host-only "break-glass" recovery action (LIVE-07): starts a fresh game
+   * with the exact same room code, hostId, and roster — no rejoin needed,
+   * including a player who disconnected during the previous game and never
+   * reconnected (D-04). Refused only with `NOT_HOST`; legal from any phase,
+   * including LOBBY itself as a harmless no-op reset of scores that are
+   * already 0. Resets every round- and game-scoped field back to its
+   * pre-game state and returns every current player's score to exactly 0 —
+   * this loop and `applyRoundScores` are now the ONLY two places in the
+   * entire codebase that ever assign to `Player.score` (T-06-04), and this
+   * is the only one that ever assigns anything other than an accumulated
+   * sum; it never reads a client-supplied number. `this.hostId` and every
+   * `Player` record itself (id/name/token/joinedAt/connected) are left
+   * completely untouched. Clearing `photosSeenByPlayer` gives the fresh game
+   * its own complete no-repeat photo pool rather than inheriting the
+   * previous game's exhausted one (D-04's "each game is a discrete,
+   * independent contest").
+   */
+  restartGame(playerId: string): RestartGameOutcome {
+    if (playerId !== this.hostId) {
+      return { ok: false, error: "NOT_HOST" };
+    }
+
+    this.clearPhaseTimer();
+    this.deadlineAt = null;
+    this.phase = "LOBBY";
+    this.roundIndex = 0;
+    this.settingsLocked = false;
+    this.submissions.clear();
+    this.rotation = [];
+    this.stepIndex = -1;
+    this.ratings.clear();
+    this.eligibleAtClose.clear();
+    this.photoAssignments.clear();
+    this.bestOfNight = [];
+    this.photosSeenByPlayer.clear();
+    this.swapUsed.clear();
+    this.roundEndSkippedByHost = false;
+
+    for (const player of this.players.values()) {
+      player.score = 0;
     }
 
     return { ok: true };

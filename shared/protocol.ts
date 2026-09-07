@@ -172,6 +172,8 @@ export const CLIENT_EVENTS = {
   swapPhoto: "swap-photo", // {}  — host-blind, no payload; ROUND-06 (added in plan 04-01)
   skipRound: "skip-round", // {}  — host-only, no payload (Phase 6, LIVE-04)
   removePlayer: "remove-player", // { targetPlayerId: string } — host-only (Phase 6, LIVE-05)
+  endGame: "end-game", // {}  — host-only, no payload (Phase 6, LIVE-06)
+  restartGame: "restart-game", // {}  — host-only, no payload (Phase 6, LIVE-07)
 } as const;
 
 export const SERVER_EVENTS = {

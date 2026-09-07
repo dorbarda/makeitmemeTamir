@@ -96,6 +96,79 @@ describe("host recovery actions — host-only, discard-not-partial-credit, never
     });
   }
 
+  // Mirrors fullLoop.integration.test.ts's own helper — rating-step
+  // submissions also broadcast an immediate snapshot with the SAME still-open
+  // step, so waiting for the specific step index (not just phase === RATING)
+  // is what makes this unambiguous.
+  function waitForRatingStep(
+    socket: Awaited<ReturnType<typeof connectClient>>,
+    index: number,
+  ): Promise<LobbySnapshot> {
+    return new Promise((resolve) => {
+      const onState = (snapshot: LobbySnapshot) => {
+        if (snapshot.phase === "RATING" && snapshot.ratingStep?.index === index) {
+          socket.off(SERVER_EVENTS.state, onState);
+          resolve(snapshot);
+        }
+      };
+      socket.on(SERVER_EVENTS.state, onState);
+    });
+  }
+
+  /**
+   * Plays round 1 of a freshly-created 3-player, 2-round room to completion
+   * with exactly one real, known-value rated meme (host and b submit, one of
+   * them rates the other's meme with `ratedValue`; the OTHER step in the
+   * two-step rotation goes unrated and closes on its own short deadline,
+   * contributing 0). Returns once round 2's WRITING has opened, along with
+   * which player authored the one rated meme — the load-bearing fact both
+   * the end-game-mid-round and restart-game tests need to assert a real,
+   * nonzero, round-1-only score survived intact.
+   */
+  async function playRoundOneWithOneKnownScore(
+    host: Awaited<ReturnType<typeof connectClient>>,
+    b: Awaited<ReturnType<typeof connectClient>>,
+    roomCode: string,
+    ratedValue: 1 | 2 | 3,
+  ): Promise<string> {
+    const room = server.roomManager.findRoom(roomCode);
+    if (!room) throw new Error("room not found for internal seeding");
+    room.settings.rounds = 2;
+    room.settings.writingSeconds = 0.2;
+    room.settings.ratingSeconds = 0.15;
+
+    const hostOnWriting = waitForPhase(host, "WRITING");
+    host.emit(CLIENT_EVENTS.startGame, {});
+    await hostOnWriting;
+
+    const bOnHostSubmit = waitFor<LobbySnapshot>(b, SERVER_EVENTS.state);
+    host.emit(CLIENT_EVENTS.submitCaption, { meme: fakeMeme("host") });
+    await bOnHostSubmit;
+
+    const hostOnBSubmit = waitFor<LobbySnapshot>(host, SERVER_EVENTS.state);
+    b.emit(CLIENT_EVENTS.submitCaption, { meme: fakeMeme("b") });
+    await hostOnBSubmit;
+
+    const step0 = await waitForRatingStep(host, 0);
+    // Only host and b ever submitted a caption this round — if host isn't
+    // step 0's author, b must be (found by name, since RatingStepView never
+    // carries author identity for anyone but the author themself, D-14).
+    const step0AuthorId = step0.ratingStep?.youAreAuthor
+      ? step0.you.id
+      : step0.players.find((p) => p.name === "בי")!.id;
+    const step0Rater = step0.ratingStep?.youAreAuthor ? b : host;
+
+    const step1Waiter = waitForRatingStep(host, 1);
+    step0Rater.emit(CLIENT_EVENTS.submitRating, { stepIndex: 0, value: ratedValue });
+    await step1Waiter;
+    // Step 1 goes unrated by everyone — closes on its own short deadline.
+
+    const nextWriting = waitForPhase(host, "WRITING");
+    await nextWriting;
+
+    return step0AuthorId;
+  }
+
   describe("skip-round (LIVE-04)", () => {
     it("a non-host skip-round produces NOT_HOST and the room stays untouched", async () => {
       const { host, b, c, roomCode } = await makeRoomWithThreePlayers();
@@ -319,6 +392,130 @@ describe("host recovery actions — host-only, discard-not-partial-credit, never
 
       host.close();
       c.close();
+    });
+  });
+
+  describe("end-game (LIVE-06)", () => {
+    it("a non-host end-game produces NOT_HOST", async () => {
+      const { host, b, c } = await makeRoomWithThreePlayers();
+
+      const errorOnB = waitFor<ProtocolError>(b, SERVER_EVENTS.error);
+      b.emit(CLIENT_EVENTS.endGame, {});
+      const error = await errorOnB;
+      expect(error.code).toBe("NOT_HOST");
+
+      const resync = waitFor<LobbySnapshot>(host, SERVER_EVENTS.state);
+      host.emit(CLIENT_EVENTS.requestResync);
+      const snapshot = await resync;
+      expect(snapshot.phase).toBe("LOBBY");
+
+      host.close();
+      b.close();
+      c.close();
+    });
+
+    it("end-game at LOBBY, and again once already at GAME_END, both produce WRONG_PHASE", async () => {
+      const { host, b, c, roomCode } = await makeRoomWithThreePlayers();
+
+      const errorAtLobby = waitFor<ProtocolError>(host, SERVER_EVENTS.error);
+      host.emit(CLIENT_EVENTS.endGame, {});
+      expect((await errorAtLobby).code).toBe("WRONG_PHASE");
+
+      // D-09's own skip path — every round skipped for too few captions —
+      // reaches GAME_END fastest: rounds=1, nobody submits, writing closes
+      // on its own short deadline straight to GAME_END.
+      const room = server.roomManager.findRoom(roomCode);
+      if (!room) throw new Error("room not found for internal seeding");
+      room.settings.rounds = 1;
+      room.settings.writingSeconds = 0.2;
+
+      const hostAtGameEnd = waitForPhase(host, "GAME_END");
+      host.emit(CLIENT_EVENTS.startGame, {});
+      await hostAtGameEnd;
+
+      const errorAtGameEnd = waitFor<ProtocolError>(host, SERVER_EVENTS.error);
+      host.emit(CLIENT_EVENTS.endGame, {});
+      expect((await errorAtGameEnd).code).toBe("WRONG_PHASE");
+
+      host.close();
+      b.close();
+      c.close();
+    });
+
+    it("end-game mid-round jumps straight to GAME_END, preserving a prior round's already-accumulated score and discarding only the interrupted round", async () => {
+      const { host, b, c, roomCode } = await makeRoomWithThreePlayersAndSessions();
+
+      const authorId = await playRoundOneWithOneKnownScore(host, b, roomCode, 3);
+
+      const hostAtGameEnd = waitForPhase(host, "GAME_END");
+      host.emit(CLIENT_EVENTS.endGame, {});
+      const snapshot = await hostAtGameEnd;
+
+      expect(snapshot.phase).toBe("GAME_END");
+      const authorView = snapshot.players.find((p) => p.id === authorId);
+      expect(authorView?.score).toBe(3);
+      // Every other player contributed nothing — round 2 never resolved.
+      const totalScore = snapshot.players.reduce((sum, p) => sum + p.score, 0);
+      expect(totalScore).toBe(3);
+      expect(snapshot.gameEnd?.winners.some((w) => w.id === authorId)).toBe(true);
+
+      host.close();
+      b.close();
+      c.close();
+    });
+  });
+
+  describe("restart-game (LIVE-07)", () => {
+    it("a non-host restart-game produces NOT_HOST", async () => {
+      const { host, b, c } = await makeRoomWithThreePlayers();
+
+      const errorOnB = waitFor<ProtocolError>(b, SERVER_EVENTS.error);
+      b.emit(CLIENT_EVENTS.restartGame, {});
+      const error = await errorOnB;
+      expect(error.code).toBe("NOT_HOST");
+
+      host.close();
+      b.close();
+      c.close();
+    });
+
+    it("restart-game resets every score to 0, returns to LOBBY, and keeps the same room code and roster", async () => {
+      const { host, b, c, roomCode, issuedC } = await makeRoomWithThreePlayersAndSessions();
+
+      await playRoundOneWithOneKnownScore(host, b, roomCode, 2);
+
+      const hostAtGameEnd = waitForPhase(host, "GAME_END");
+      host.emit(CLIENT_EVENTS.endGame, {});
+      const gameEndSnapshot = await hostAtGameEnd;
+      const totalBeforeRestart = gameEndSnapshot.players.reduce((sum, p) => sum + p.score, 0);
+      expect(totalBeforeRestart).toBeGreaterThan(0);
+
+      // c disconnects and never reconnects before the restart.
+      const cDisconnected = new Promise<void>((resolve) => {
+        c.once("disconnect", () => resolve());
+      });
+      const hostOnCDisconnect = waitFor<LobbySnapshot>(host, SERVER_EVENTS.state);
+      c.close();
+      await cDisconnected;
+      await hostOnCDisconnect;
+
+      const hostAtLobby = waitForPhase(host, "LOBBY");
+      host.emit(CLIENT_EVENTS.restartGame, {});
+      const restarted = await hostAtLobby;
+
+      expect(restarted.phase).toBe("LOBBY");
+      expect(restarted.roomCode).toBe(roomCode);
+      expect(restarted.settingsLocked).toBe(false);
+      expect(restarted.players).toHaveLength(3);
+      for (const player of restarted.players) {
+        expect(player.score).toBe(0);
+      }
+      const cView = restarted.players.find((p) => p.id === issuedC.playerId);
+      expect(cView).toBeDefined();
+      expect(cView?.connected).toBe(false);
+
+      host.close();
+      b.close();
     });
   });
 });
