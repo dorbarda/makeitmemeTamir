@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { assignPhotos, photoUrl, PHOTO_FILENAMES } from "../src/rooms/photos.js";
+import {
+  assignPhotos,
+  assignPhotosFromEligiblePools,
+  drawOnePhoto,
+  photoUrl,
+  PHOTO_FILENAMES,
+} from "../src/rooms/photos.js";
 
 // Pure unit test over assignPhotos/photoUrl, using a small local injected
 // pool so the test is deterministic and independent of however many real
@@ -41,6 +47,66 @@ describe("assignPhotos", () => {
   it("never throws for an empty playerIds array", () => {
     expect(() => assignPhotos([], pool)).not.toThrow();
     expect(assignPhotos([], pool).size).toBe(0);
+  });
+});
+
+// ROUND-02's per-player draw, same small-injected-pool determinism style as
+// assignPhotos above.
+describe("assignPhotosFromEligiblePools", () => {
+  it("given two players whose eligible pools do not overlap at all, assigns each player a filename from their OWN eligible pool only", () => {
+    const pools = new Map<string, string[]>([
+      ["p1", ["a.jpg", "b.jpg"]],
+      ["p2", ["c.jpg", "d.jpg"]],
+    ]);
+    const assignments = assignPhotosFromEligiblePools(pools);
+    expect(assignments.size).toBe(2);
+    expect(["a.jpg", "b.jpg"]).toContain(assignments.get("p1"));
+    expect(["c.jpg", "d.jpg"]).toContain(assignments.get("p2"));
+  });
+
+  it("given two players who share an identical single-filename eligible pool, still assigns a real pool member to both (the accepted degradation)", () => {
+    const pools = new Map<string, string[]>([
+      ["p1", ["only.jpg"]],
+      ["p2", ["only.jpg"]],
+    ]);
+    const assignments = assignPhotosFromEligiblePools(pools);
+    expect(assignments.size).toBe(2);
+    expect(assignments.get("p1")).toBe("only.jpg");
+    expect(assignments.get("p2")).toBe("only.jpg");
+  });
+
+  it("returns an empty map for an empty input map, never throwing", () => {
+    expect(() => assignPhotosFromEligiblePools(new Map())).not.toThrow();
+    expect(assignPhotosFromEligiblePools(new Map()).size).toBe(0);
+  });
+
+  it("with three players and a three-filename shared pool, assigns each player a distinct pool member", () => {
+    const pool = ["a.jpg", "b.jpg", "c.jpg"];
+    const pools = new Map<string, string[]>([
+      ["p1", pool],
+      ["p2", pool],
+      ["p3", pool],
+    ]);
+    const assignments = assignPhotosFromEligiblePools(pools);
+    const values = [...assignments.values()];
+    expect(new Set(values).size).toBe(3);
+    for (const filename of values) {
+      expect(pool).toContain(filename);
+    }
+  });
+});
+
+describe("drawOnePhoto", () => {
+  const pool = ["a.jpg", "b.jpg", "c.jpg"];
+
+  it("called repeatedly against a multi-item pool, always returns a member of that pool", () => {
+    for (let i = 0; i < 50; i++) {
+      expect(pool).toContain(drawOnePhoto(pool));
+    }
+  });
+
+  it("returns the sole entry for a single-item pool", () => {
+    expect(drawOnePhoto(["only.jpg"])).toBe("only.jpg");
   });
 });
 
