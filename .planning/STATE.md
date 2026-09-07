@@ -104,6 +104,7 @@ Recent decisions affecting current work:
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260907-mtn | Fix photoUrl() in server/src/rooms/photos.ts to URL-encode the filename before building the /tamir-photos/ path | 2026-09-07 | cfa8f55 | [260907-mtn-fix-photourl-in-server-src-rooms-photos-](./quick/260907-mtn-fix-photourl-in-server-src-rooms-photos-/) |
+| 260907-mzz | Compress the real Tamir photos in client/public/tamir-photos to reduce mobile load time (42.99MB -> 7.74MB, 82% reduction) | 2026-09-07 | 5e47c75 | [260907-mzz-compress-the-real-tamir-photos-in-client](./quick/260907-mzz-compress-the-real-tamir-photos-in-client/) |
 
 ## Deferred Items
 
