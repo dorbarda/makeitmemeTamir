@@ -194,7 +194,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 06-01-PLAN.md — Server-side host recovery actions: skip round, remove player, end game, restart game
+- [x] 06-01-PLAN.md — Server-side host recovery actions: skip round, remove player, end game, restart game
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
