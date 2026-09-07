@@ -102,4 +102,17 @@ export const HEBREW_UI = {
   saveMemeButton: "שמירה או שיתוף",
   longPressInstructions: "לחצו לחיצה ארוכה על התמונה ובחרו 'שמירת תמונה'",
   doneButton: "סיום",
+  // plan 06-02 — host controls panel and confirmation copy
+  hostControlsHeading: "לא עובד? בעזרת המנחה",
+  skipRoundButton: "דילוג על הסיבוב",
+  removePlayerButton: "הסרת שחקן",
+  endGameButton: "סיום המשחק",
+  restartGameButton: "משחק חדש",
+  skipRoundConfirm: "הסיבוב הנוכחי יבוטל. בטוח?",
+  endGameConfirm: "המשחק הנוכחי יסתיים. בטוח?",
+  restartGameConfirm: "כל השחקנים חוזרים ללובי עם ניקוד חדש. בטוח?",
+  removePlayerConfirm: "זה יתנתק את {playerName} מהחדר. בטוח?",
+  removePlayerEmptyState: "אין שחקנים אחרים להסרה",
+  cancelButton: "ביטול",
+  confirmButton: "אישור",
 };
