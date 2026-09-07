@@ -34,9 +34,14 @@ function loadPhotoFilenames(): string[] {
 
 export const PHOTO_FILENAMES: string[] = loadPhotoFilenames();
 
-/** The exact static path `app.ts` already serves `client/public/` under. */
+/**
+ * The exact static path `app.ts` already serves `client/public/` under.
+ * Percent-encodes the filename so real uploaded filenames containing spaces,
+ * parentheses, or other reserved characters (e.g. "IMG_1617 (2).jpg") produce
+ * a valid, resolvable URL path instead of a silently broken one.
+ */
 export function photoUrl(filename: string): string {
-  return `/tamir-photos/${filename}`;
+  return `/tamir-photos/${encodeURIComponent(filename)}`;
 }
 
 /** Fisher-Yates over `Math.random()` — no crypto RNG needed for a party game. */
