@@ -307,6 +307,18 @@ li {
   border-radius: 0.5rem;
 }
 
+/* The live canvas compositor in WritingPanel — same relative sizing as
+   .meme-photo so the canvas and the downstream <img> read as the same
+   visual element on every screen. */
+.meme-canvas {
+  display: block;
+  width: 100%;
+  max-width: 24rem;
+  height: auto;
+  margin: 0 auto 0.75rem;
+  border-radius: 0.5rem;
+}
+
 /* D-03 — the between-rounds scoreboard. Mobile-first, no fixed widths, same
    shape as .round-end-panel. */
 .scoreboard {

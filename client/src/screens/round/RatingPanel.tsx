@@ -8,6 +8,7 @@ import {
 } from "@shared/protocol.js";
 import { HEBREW_ERRORS, HEBREW_UI } from "@shared/messages.js";
 import { getSocket } from "../../socket/connection";
+import { memeDataUrl } from "../../canvas/compositor.js";
 
 type RatingPanelProps = {
   snapshot: LobbySnapshot;
@@ -65,8 +66,7 @@ export function RatingPanel({ snapshot }: RatingPanelProps) {
         {ratingStep.index + 1} {HEBREW_UI.ofSeparator} {ratingStep.total}
       </p>
 
-      <img className="meme-photo" src={ratingStep.photoUrl} alt={HEBREW_UI.photoAlt} />
-      <p>{ratingStep.caption}</p>
+      <img className="meme-photo" src={memeDataUrl(ratingStep.meme)} alt={HEBREW_UI.photoAlt} />
 
       {ratingStep.youAreAuthor ? (
         <p>{HEBREW_UI.yourMemeWaiting}</p>

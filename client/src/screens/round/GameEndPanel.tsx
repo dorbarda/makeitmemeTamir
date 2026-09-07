@@ -1,5 +1,6 @@
 import type { LobbySnapshot } from "@shared/protocol.js";
 import { HEBREW_UI } from "@shared/messages.js";
+import { memeDataUrl } from "../../canvas/compositor.js";
 
 type GameEndPanelProps = {
   snapshot: LobbySnapshot;
@@ -56,8 +57,7 @@ export function GameEndPanel({ snapshot }: GameEndPanelProps) {
           <ol className="best-of-list">
             {snapshot.gameEnd.bestOfNight.map((entry, index) => (
               <li key={`${entry.authorId}-${index}`} className="best-of-entry">
-                <img className="meme-photo" src={entry.photoUrl} alt={HEBREW_UI.photoAlt} />
-                <p>{entry.caption}</p>
+                <img className="meme-photo" src={memeDataUrl(entry.meme)} alt={HEBREW_UI.photoAlt} />
                 <p className="best-of-meta">
                   {entry.authorName} — {entry.score} {HEBREW_UI.roundResultsPointsSuffix}
                 </p>
