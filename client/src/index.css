@@ -419,3 +419,35 @@ li {
   word-spacing: 0.1em;
 }
 
+/* plan 05-04 — MEME-03/D-03 save/share button. Outlined secondary style,
+   same convention as .swap-photo-button/.caption-box-remove — never reads
+   as the primary action on either RatingPanel or GameEndPanel. */
+.save-share-button {
+  background: transparent;
+  border: 1px solid currentColor;
+  color: inherit;
+  margin: 0.5rem 0 0;
+}
+
+/* plan 05-04 — the full-screen long-press-to-save fallback modal shown when
+   navigator.share/canShare is unsupported. */
+.save-meme-fallback {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: rgba(0, 0, 0, 0.9);
+  color: #fff;
+}
+
+.save-meme-fallback img {
+  max-width: 100%;
+  max-height: 70vh;
+  border-radius: 0.5rem;
+}
+

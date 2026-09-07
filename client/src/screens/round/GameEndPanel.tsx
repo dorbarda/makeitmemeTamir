@@ -1,6 +1,7 @@
 import type { LobbySnapshot } from "@shared/protocol.js";
 import { HEBREW_UI } from "@shared/messages.js";
 import { memeDataUrl } from "../../canvas/compositor.js";
+import { SaveShareButton } from "./SaveShareButton";
 
 type GameEndPanelProps = {
   snapshot: LobbySnapshot;
@@ -61,6 +62,7 @@ export function GameEndPanel({ snapshot }: GameEndPanelProps) {
                 <p className="best-of-meta">
                   {entry.authorName} — {entry.score} {HEBREW_UI.roundResultsPointsSuffix}
                 </p>
+                <SaveShareButton meme={entry.meme} />
               </li>
             ))}
           </ol>
