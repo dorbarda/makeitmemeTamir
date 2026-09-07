@@ -23,16 +23,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-09-05)
 
 **Core value:** Ten-plus friends in the same room can all join on their phones and play a full game of write-a-caption-and-vote in Hebrew without anyone getting stuck, disconnected, or confused.
-**Current focus:** Phase 02 — Server-Authoritative Round Engine
+**Current focus:** Phase 04 — Full Round, Rating & Scoring Completion (Phase 3 skipped)
 
 ## Current Position
 
-Phase: 02 (Server-Authoritative Round Engine) — EXECUTING
-Plan: 1 of 5
-Status: Executing Phase 02
-Last activity: 2026-09-06 — Phase 02 execution started
+Phase: 04 (Full Round, Rating & Scoring Completion) — CONTEXT GATHERED, ready to plan
+Status: Context captured, next step is /gsd-plan-phase 4
+Last activity: 2026-09-07 — Phase 3 skipped; Phase 4 context gathered (scope absorbed Phase 3's requirements)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 22% (2 of 9 phases complete; Phase 3 skipped)
 
 ## Performance Metrics
 
@@ -82,11 +81,9 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- Phase 3/4 planning: choose funny Hebrew names for the three rating tiers (3 = funniest, 2 = fine,
-  1 = meh) together with the user.
-- Phase 3/4 planning: deliberately size each meme's rating-step duration. With ~12 players there
-  are ~12 sequential rating steps per round, each with its own timer — total round time, not
-  per-step correctness, is the real risk of a round dragging on too long.
+- (Resolved 2026-09-07) Rating tier names decided in Phase 4 context D-04: "מת מצחוק" (3) /
+  "חייכתי" (2) / "אה, בסדר" (1).
+- (Resolved in Phase 2) Rating-step duration sized: 10s default, host-adjustable 8/10/15s.
 
 ### Blockers/Concerns
 
