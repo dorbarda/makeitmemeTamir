@@ -89,6 +89,12 @@ export const BETWEEN_PHASES_MS = 3_000;
 // rating it.
 export const MIN_SUBMISSIONS_TO_RATE = 2;
 
-// A payload-size bound for threat T-02-08, not a UX limit — Phase 3 owns
-// whatever visible caption length is actually shown to players.
-export const MAX_CAPTION_GRAPHEMES = 120;
+// T-05-01: a payload-size bound for the submitted meme (base64-encoded PNG),
+// not a UX limit. No minimum floor — an implausibly small image is a UX
+// problem, never a security one — only a maximum guards against a
+// DoS-sized payload reaching every other player's socket (RESEARCH.md's
+// rasterize-and-transmit decision, D-01).
+export const MEME_MAX_BASE64_CHARS = 2_800_000; // ~2MB decoded
+// Socket.IO safety margin above MEME_MAX_BASE64_CHARS (RESEARCH.md's
+// recommended value).
+export const SOCKET_MAX_BUFFER_BYTES = 5_000_000; // 5MB

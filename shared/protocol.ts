@@ -50,8 +50,7 @@ export type RatingValue = 1 | 2 | 3;
 export type RatingStepView = {
   index: number;
   total: number;
-  caption: string;
-  photoUrl: string;
+  meme: string; // base64-encoded PNG (RESEARCH.md rasterize-and-transmit) — replaces caption+photoUrl
   youAreAuthor: boolean;
   youMayRate: boolean;
   youHaveRated: boolean;
@@ -68,7 +67,7 @@ export type RatingStepView = {
 export type RoundEndEntry = {
   authorId: string;
   authorName: string;
-  caption: string;
+  meme: string;
   ratings: RatingValue[];
   eligibleAtClose: number;
   // VOTE-06 (plan 04-01) — the server-computed sum of `ratings`, added once
@@ -87,8 +86,7 @@ export type RoundEndView = { entries: RoundEndEntry[] };
 export type BestOfEntry = {
   authorId: string;
   authorName: string;
-  caption: string;
-  photoUrl: string;
+  meme: string;
   score: number;
 };
 
@@ -144,6 +142,7 @@ export type ErrorCode =
   | "NOT_ENOUGH_PLAYERS"
   | "WRONG_PHASE"
   | "CAPTION_REQUIRED"
+  | "MEME_TOO_LARGE"
   | "ALREADY_SUBMITTED"
   | "ALREADY_RATED"
   | "CANNOT_RATE_OWN"
@@ -160,7 +159,7 @@ export const CLIENT_EVENTS = {
   requestResync: "request-resync", // {}
   startGame: "start-game", // {}  — host-only, no payload (added in plan 02-01)
   changeSettings: "change-settings", // { key: SettingKey, value: number }  (added in plan 02-01; wired in 02-02)
-  submitCaption: "submit-caption", // { text: string }  (added in plan 02-01; wired in 02-03)
+  submitCaption: "submit-caption", // { meme: string } — base64-encoded PNG (Phase 5, replaces { text: string })
   submitRating: "submit-rating", // { stepIndex: number, value: RatingValue }  (added in plan 02-01; wired in 02-04)
   swapPhoto: "swap-photo", // {}  — host-blind, no payload; ROUND-06 (added in plan 04-01)
 } as const;

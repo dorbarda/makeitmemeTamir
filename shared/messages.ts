@@ -19,6 +19,7 @@ export const HEBREW_ERRORS: Record<ErrorCode, string> = {
   NOT_ENOUGH_PLAYERS: "צריך לפחות 3 שחקנים כדי להתחיל",
   WRONG_PHASE: "אי אפשר לעשות את זה עכשיו",
   CAPTION_REQUIRED: "צריך לכתוב כיתוב כדי לשלוח",
+  MEME_TOO_LARGE: "התמונה גדולה מדי — נסו לצמצם את הכיתובים",
   ALREADY_SUBMITTED: "כבר שלחת כיתוב לסיבוב הזה",
   ALREADY_RATED: "כבר דירגת את התמונה הזו",
   CANNOT_RATE_OWN: "אי אפשר לדרג את התמונה של עצמך",
