@@ -26,7 +26,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Room, Session & Reconnect Foundation** - Players can create/join a room by code or QR with a unique name, see who's in the room live, and survive a phone lock or refresh without losing identity or score
 - [x] **Phase 2: Server-Authoritative Round Engine** - The server owns every phase's clock so the game never freezes on a missing or slow player
-- [ ] **Phase 3: Core Loop Checkpoint (Real Phones, End-to-End)** - A full round of write-a-caption, rate memes one-at-a-time, and score is proven working on real phones before deeper features are built
+- [x] **Phase 3: Core Loop Checkpoint (Real Phones, End-to-End)** — SKIPPED (2026-09-07, time-constrained; playtest folded into end of Phase 4)
 - [ ] **Phase 4: Full Round, Rating & Scoring Completion** - The complete round loop ships: no-repeat photos, photo swap, cannot-rate-own-meme with hidden ratings until each meme's step closes, ranked round results, running score totals, final winner, and best-of-night
 - [ ] **Phase 5: Hebrew RTL Meme Compositor & Souvenir** - Players can produce and keep a correctly rendered, right-to-left Hebrew meme image as their souvenir
 - [ ] **Phase 6: Host Controls & RTL Interface Hardening** - The host has recovery tools for live mishaps, and the whole interface reads correctly in Hebrew on iPhone and Android
@@ -103,8 +103,9 @@ Plans:
 
 - [x] 02-05-PLAN.md — Closing the loop: too-few-captions skip, round and game end, and the never-stalls battery
 
-### Phase 3: Core Loop Checkpoint (Real Phones, End-to-End)
+### Phase 3: Core Loop Checkpoint (Real Phones, End-to-End) — SKIPPED
 
+**Status**: SKIPPED (2026-09-07) — user is time-constrained (weekly usage limit) and explicitly chose to skip this dedicated real-phone checkpoint and move straight to Phase 4. A lightweight real-phone playtest will happen at the end of Phase 4 instead of a standalone checkpoint phase. Requirements below still need coverage and are expected to be exercised as part of Phase 4's build/testing.
 **Goal**: A complete round of write-a-caption, one-at-a-time meme rating, and score works for real players on real phones, proving every layer built so far actually connects, before the fuller feature set or any polish is layered on top. This is the early integration checkpoint the horizontal-layer structure needs, run well before the final phases.
 **Depends on**: Phase 1, Phase 2
 **Requirements**: ROUND-01, ROUND-03, VOTE-01, VOTE-02, SCORE-01, SCORE-03
@@ -115,20 +116,22 @@ Plans:
   3. Each player's round score is the sum of the ratings their own meme received, and a running scoreboard updates after the round
   4. This full loop — join, write, rate meme-by-meme, score — has been played start-to-finish on at least two distinct real phones with no stalls, crashes, or desyncs
 
-**Plans**: TBD
+**Plans**: SKIPPED — not planned; see Phase 4 for coverage
 
 ### Phase 4: Full Round, Rating & Scoring Completion
 
-**Goal**: The round loop and endgame reach the complete game spec: no repeated photos across the game, a one-time photo swap, a meme's author correctly excluded from rating their own meme with a waiting state while it's on screen, individual ratings kept fully hidden until each meme's rating step closes, a round results screen that ranks that round's memes by total points, round scores accumulating into a running game total, and proper final/best-of screens. Built on top of the proven Phase 3 checkpoint.
-**Depends on**: Phase 3
-**Requirements**: ROUND-02, ROUND-06, VOTE-03, VOTE-05, VOTE-06, SCORE-02, SCORE-04, MEME-02
+**Goal**: The complete game loop ships end to end on top of Phase 2's round engine: real photos of Tamir with no-repeat selection and a one-time swap, the Hebrew caption-writing screen, memes revealed one at a time with a funny-named 3/2/1 rating scale, a meme's author excluded from rating their own meme with a waiting state, individual ratings hidden until each meme's step closes, a round results screen ranking that round's memes, round scores accumulating into a running game total with a scoreboard, and final/best-of-night screens. **Scope note**: Phase 3 (the real-phones checkpoint) was explicitly skipped for time — this phase therefore absorbs Phase 3's requirements (ROUND-01, ROUND-03, VOTE-01, VOTE-02, SCORE-01, SCORE-03) in addition to its own, since nothing else builds them. A lightweight real-phone playtest happens at the end of this phase instead of a dedicated checkpoint.
+**Depends on**: Phase 2 (Phase 3 skipped — see scope note)
+**Requirements**: ROUND-01, ROUND-02, ROUND-03, ROUND-06, VOTE-01, VOTE-02, VOTE-03, VOTE-05, VOTE-06, SCORE-01, SCORE-02, SCORE-03, SCORE-04, MEME-02
 **Success Criteria** (what must be TRUE):
 
-  1. No player sees the same photo twice in a single game, and a player can swap their assigned photo for a different one exactly once per round before submitting
-  2. A meme's author cannot rate their own meme and instead sees a waiting state while it is on screen; every other player's individual rating for that meme stays hidden while it is being rated
-  3. Once a meme's rating step closes, its total score is revealed, and once every meme in the round has been rated, the round results screen ranks all of that round's memes by total points
-  4. Each round's score accumulates into a running game total, and a final winner screen appears once the last round ends
-  5. A "best of the night" screen shows the highest-scoring memes from across the whole game, tracked from round one rather than reconstructed at the end
+  1. Every player receives their own photo of Tamir, can type and submit a Hebrew caption within the round's countdown, no photo repeats within a game, and a player can swap their assigned photo for a different one exactly once per round before submitting
+  2. After writing closes, that round's memes are revealed one at a time — the same meme on every player's screen at once — and each player rates the meme currently on screen on the three-point scale (3/2/1, with funny Hebrew tier names)
+  3. A meme's author cannot rate their own meme and instead sees a waiting state while it is on screen; every other player's individual rating for that meme stays hidden while it is being rated
+  4. Once a meme's rating step closes, its total score is revealed, and once every meme in the round has been rated, the round results screen ranks all of that round's memes by total points
+  5. Each player's round score is the sum of the ratings their own meme received; round scores accumulate into a running game total shown on a scoreboard between rounds, and a final winner screen appears once the last round ends
+  6. A "best of the night" screen shows the highest-scoring memes from across the whole game, tracked from round one rather than reconstructed at the end
+  7. This full loop — join, write, rate meme-by-meme, score — has been played start-to-finish on at least two distinct real phones with no stalls, crashes, or desyncs (folded-in Phase 3 checkpoint, done lightweight at the end of this phase)
 
 **Plans**: TBD
 **UI hint**: yes
@@ -209,7 +212,7 @@ natural requirement-coverage position.)
 |-------|----------------|--------|-----------|
 | 1. Room, Session & Reconnect Foundation | 4/4 | Complete | 2026-09-06 |
 | 2. Server-Authoritative Round Engine | 5/5 | Complete | 2026-09-06 |
-| 3. Core Loop Checkpoint (Real Phones, End-to-End) | 0/TBD | Not started | - |
+| 3. Core Loop Checkpoint (Real Phones, End-to-End) | - | Skipped | 2026-09-07 |
 | 4. Full Round, Rating & Scoring Completion | 0/TBD | Not started | - |
 | 5. Hebrew RTL Meme Compositor & Souvenir | 0/TBD | Not started | - |
 | 6. Host Controls & RTL Interface Hardening | 0/TBD | Not started | - |

@@ -121,21 +121,21 @@ Which phases cover which requirements. Populated during roadmap creation.
 | LOBBY-05 | Phase 1 | Pending |
 | LOBBY-06 | Phase 2 | Pending |
 | LOBBY-07 | Phase 2 | Pending |
-| ROUND-01 | Phase 3 | Pending |
+| ROUND-01 | Phase 4 (Phase 3 skipped) | Pending |
 | ROUND-02 | Phase 4 | Pending |
-| ROUND-03 | Phase 3 | Pending |
+| ROUND-03 | Phase 4 (Phase 3 skipped) | Pending |
 | ROUND-04 | Phase 2 | Pending |
 | ROUND-05 | Phase 2 | Pending |
 | ROUND-06 | Phase 4 | Pending |
-| VOTE-01 | Phase 3 | Pending |
-| VOTE-02 | Phase 3 | Pending |
+| VOTE-01 | Phase 4 (Phase 3 skipped) | Pending |
+| VOTE-02 | Phase 4 (Phase 3 skipped) | Pending |
 | VOTE-03 | Phase 4 | Pending |
 | VOTE-04 | Phase 2 | Pending |
 | VOTE-05 | Phase 4 | Pending |
 | VOTE-06 | Phase 4 | Pending |
-| SCORE-01 | Phase 3 | Pending |
+| SCORE-01 | Phase 4 (Phase 3 skipped) | Pending |
 | SCORE-02 | Phase 4 | Pending |
-| SCORE-03 | Phase 3 | Pending |
+| SCORE-03 | Phase 4 (Phase 3 skipped) | Pending |
 | SCORE-04 | Phase 4 | Pending |
 | MEME-01 | Phase 5 | Pending |
 | MEME-02 | Phase 4 | Pending |
