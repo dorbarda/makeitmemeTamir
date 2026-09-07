@@ -114,6 +114,16 @@ describe("photoUrl", () => {
   it("returns exactly /tamir-photos/<filename>", () => {
     expect(photoUrl("x.jpg")).toBe("/tamir-photos/x.jpg");
   });
+
+  it("percent-encodes a filename containing a space and parentheses", () => {
+    const input = "IMG_1617 (2).jpg";
+    const url = photoUrl(input);
+    expect(url).not.toMatch(/ /);
+    expect(url).toMatch(/%20/);
+    expect(() => new URL(url, "http://x")).not.toThrow();
+    const parsed = new URL(url, "http://x");
+    expect(decodeURIComponent(parsed.pathname)).toBe(`/tamir-photos/${input}`);
+  });
 });
 
 // Light real-filesystem smoke check against the real, non-injected
