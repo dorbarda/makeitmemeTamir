@@ -19,9 +19,9 @@ Requirements for the party night. Each maps to a roadmap phase.
 
 ### Round Loop
 
-- [ ] **ROUND-01**: Each round, every player receives their own photo of Tamir to caption
-- [ ] **ROUND-02**: No photo repeats within a single game
-- [ ] **ROUND-06**: A player can swap their photo for a different one once per round, before submitting a caption
+- [x] **ROUND-01**: Each round, every player receives their own photo of Tamir to caption
+- [x] **ROUND-02**: No photo repeats within a single game
+- [x] **ROUND-06**: A player can swap their photo for a different one once per round, before submitting a caption
 - [ ] **ROUND-03**: Player writes a Hebrew caption for their photo within a visible countdown
 - [ ] **ROUND-04**: The server owns the countdown and advances the round when time expires, regardless of who has submitted
 - [ ] **ROUND-05**: Players see submission progress only (e.g. "8 of 12 submitted") — never other players' captions before the round closes
@@ -121,12 +121,12 @@ Which phases cover which requirements. Populated during roadmap creation.
 | LOBBY-05 | Phase 1 | Pending |
 | LOBBY-06 | Phase 2 | Pending |
 | LOBBY-07 | Phase 2 | Pending |
-| ROUND-01 | Phase 4 (Phase 3 skipped) | Pending |
-| ROUND-02 | Phase 4 | Pending |
+| ROUND-01 | Phase 4 (Phase 3 skipped) | Complete |
+| ROUND-02 | Phase 4 | Complete |
 | ROUND-03 | Phase 4 (Phase 3 skipped) | Pending |
 | ROUND-04 | Phase 2 | Pending |
 | ROUND-05 | Phase 2 | Pending |
-| ROUND-06 | Phase 4 | Pending |
+| ROUND-06 | Phase 4 | Complete |
 | VOTE-01 | Phase 4 (Phase 3 skipped) | Pending |
 | VOTE-02 | Phase 4 (Phase 3 skipped) | Pending |
 | VOTE-03 | Phase 4 | Pending |
@@ -156,6 +156,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | DEPLOY-04 | Phase 8 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 40 total
 - Mapped to phases: 40
 - Unmapped: 0 ✓
