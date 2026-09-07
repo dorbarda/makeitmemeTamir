@@ -96,4 +96,8 @@ export const HEBREW_UI = {
   memeEditorInstructions: "גררו כל כיתוב למקום הרצוי על התמונה",
   addCaptionBoxButton: "הוספת כיתוב",
   deleteCaptionButton: "מחיקה",
+  // plan 05-04 — save/share
+  saveMemeButton: "שמירה או שיתוף",
+  longPressInstructions: "לחצו לחיצה ארוכה על התמונה ובחרו 'שמירת תמונה'",
+  doneButton: "סיום",
 };
