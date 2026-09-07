@@ -133,8 +133,25 @@ Plans:
   6. A "best of the night" screen shows the highest-scoring memes from across the whole game, tracked from round one rather than reconstructed at the end
   7. This full loop — join, write, rate meme-by-meme, score — has been played start-to-finish on at least two distinct real phones with no stalls, crashes, or desyncs (folded-in Phase 3 checkpoint, done lightweight at the end of this phase)
 
-**Plans**: TBD
+**Plans**: 4 plans
 **UI hint**: yes
+
+Plans:
+**Wave 1**
+
+- [ ] 04-01-PLAN.md — Placeholder Tamir photo set + photo pool manifest/selection algorithm (D-05, D-06, D-08)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 04-02-PLAN.md — Tracer: real photo assignment, one-time swap, round scoring, VOTE-06 ranking, and the running best-of-night list, wired server-side end to end
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 04-03-PLAN.md — Client wiring: real photo, real Hebrew tier names, author wait state, and ranked staggered round results
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 04-04-PLAN.md — Running scoreboard, final winner screen, best-of-night screen, and the D-12 real-phone playtest closing the folded-in Phase 3 checkpoint
 
 ### Phase 5: Hebrew RTL Meme Compositor & Souvenir
 
@@ -213,7 +230,7 @@ natural requirement-coverage position.)
 | 1. Room, Session & Reconnect Foundation | 4/4 | Complete | 2026-09-06 |
 | 2. Server-Authoritative Round Engine | 5/5 | Complete | 2026-09-06 |
 | 3. Core Loop Checkpoint (Real Phones, End-to-End) | - | Skipped | 2026-09-07 |
-| 4. Full Round, Rating & Scoring Completion | 0/TBD | Not started | - |
+| 4. Full Round, Rating & Scoring Completion | 0/4 | Planned | - |
 | 5. Hebrew RTL Meme Compositor & Souvenir | 0/TBD | Not started | - |
 | 6. Host Controls & RTL Interface Hardening | 0/TBD | Not started | - |
 | 7. Deployment & Hosting | 0/TBD | Not started | - |
