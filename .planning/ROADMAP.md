@@ -169,7 +169,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 05-04-PLAN.md — Save/share for every author, plus best-of-night view/export reuse (D-03)
+- [x] 05-04-PLAN.md — Save/share for every author, plus best-of-night view/export reuse (D-03)
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
