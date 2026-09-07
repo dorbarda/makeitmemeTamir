@@ -165,7 +165,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 05-03-PLAN.md — Multi-box drag editor: up to 3 caption boxes, pointer-event drag-and-drop, hit-testing
+- [x] 05-03-PLAN.md — Multi-box drag editor: up to 3 caption boxes, pointer-event drag-and-drop, hit-testing
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
