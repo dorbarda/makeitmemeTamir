@@ -196,7 +196,11 @@ describe("LIVE-03 — no phase can be held open by a player who left, disconnect
     vi.advanceTimersByTime(3_600_000);
     expect(room.phase).toBe("GAME_END");
     expect(seenPhases).not.toContain("RATING");
-    expect(room.snapshotFor(players[0].id).roundEnd?.entries).toEqual([]);
+    // `roundEnd` is now ROUND_END-only (plan 04-02) — at GAME_END the
+    // equivalent "nothing was ever rated" proof is bestOfNight staying
+    // exactly empty (MEME-02/D-04), never padded or fabricated.
+    expect(room.snapshotFor(players[0].id).roundEnd).toBeNull();
+    expect(room.snapshotFor(players[0].id).gameEnd?.bestOfNight).toEqual([]);
   });
 
   it("a RoundEndEntry for a step rated by two of four eligible raters has a ratings array of length 2 and eligibleAtClose equal to 4", () => {
