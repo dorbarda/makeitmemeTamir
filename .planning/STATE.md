@@ -94,10 +94,16 @@ Recent decisions affecting current work:
   whether Render's free tier reliably supports persistent WebSocket connections. Must be
   verified against the host's current live pricing/docs page before Phase 7 executes, with a
   bias toward paying a small amount for event week if there's any doubt.
-- **OPEN DECISION (Phase 5):** iOS Safari save/share flow for the composited meme is rated LOW
-  confidence in research and must be verified on a real iPhone, not assumed from documentation.
+- **RESOLVED (Phase 5):** iOS Safari save/share flow for the composited meme was confirmed working
+  on a real phone by the user (2026-09-07) — no longer an open risk.
 - Party date is fixed and cannot move — one week total. Reliability outranks features/polish
   everywhere there is a tradeoff (explicit user priority).
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260907-mtn | Fix photoUrl() in server/src/rooms/photos.ts to URL-encode the filename before building the /tamir-photos/ path | 2026-09-07 | cfa8f55 | [260907-mtn-fix-photourl-in-server-src-rooms-photos-](./quick/260907-mtn-fix-photourl-in-server-src-rooms-photos-/) |
 
 ## Deferred Items
 
