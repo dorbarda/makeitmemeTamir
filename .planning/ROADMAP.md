@@ -28,7 +28,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Server-Authoritative Round Engine** - The server owns every phase's clock so the game never freezes on a missing or slow player
 - [x] **Phase 3: Core Loop Checkpoint (Real Phones, End-to-End)** - A full round of write-a-caption, rate memes one-at-a-time, and score is proven working on real phones before deeper features are built
 - [x] **Phase 4: Full Round, Rating & Scoring Completion** - The complete round loop ships: no-repeat photos, photo swap, cannot-rate-own-meme with hidden ratings until each meme's step closes, ranked round results, running score totals, final winner, and best-of-night
-- [ ] **Phase 5: Hebrew RTL Meme Compositor & Souvenir** - Players can produce and keep a correctly rendered, right-to-left Hebrew meme image as their souvenir
+- [x] **Phase 5: Hebrew RTL Meme Compositor & Souvenir** - Players can produce and keep a correctly rendered, right-to-left Hebrew meme image as their souvenir
 - [ ] **Phase 6: Host Controls & RTL Interface Hardening** - The host has recovery tools for live mishaps, and the whole interface reads correctly in Hebrew on iPhone and Android
 - [ ] **Phase 7: Deployment & Hosting** - The game is live on a public URL, on a hosting choice verified to hold persistent connections, with Tamir's photos loaded
 - [ ] **Phase 8: Load & Capacity Verification** - A scripted test proves the server holds 12+ simultaneous players through a full game, without involving real guests
@@ -173,7 +173,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 05-05-PLAN.md — Full regression and the real-device check (touch-drag, HEB-03 RTL rendering, iOS save/share)
+- [x] 05-05-PLAN.md — Full regression and the real-device check (touch-drag, HEB-03 RTL rendering, iOS save/share)
 
 ### Phase 6: Host Controls & RTL Interface Hardening
 
@@ -241,7 +241,7 @@ natural requirement-coverage position.)
 | 2. Server-Authoritative Round Engine | 5/5 | Complete | 2026-09-06 |
 | 3. Core Loop Checkpoint (Real Phones, End-to-End) | 1/1 | Complete | 2026-09-06 |
 | 4. Full Round, Rating & Scoring Completion | 2/2 | Complete | 2026-09-07 |
-| 5. Hebrew RTL Meme Compositor & Souvenir | 0/5 | Not started | - |
+| 5. Hebrew RTL Meme Compositor & Souvenir | 5/5 | Complete | 2026-09-07 |
 | 6. Host Controls & RTL Interface Hardening | 0/TBD | Not started | - |
 | 7. Deployment & Hosting | 0/TBD | Not started | - |
 | 8. Load & Capacity Verification | 0/TBD | Not started | - |
