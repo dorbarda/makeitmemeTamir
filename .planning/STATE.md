@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 current_phase: 06
 current_phase_name: Host Controls & RTL Interface Hardening
-status: context-gathered
-stopped_at: Phase 6 context gathered — host recovery actions (skip/remove/end-early/restart) and a full RTL audit; ready for /gsd-plan-phase 6
-last_updated: "2026-09-07T10:25:00.000Z"
+status: ui-spec-approved
+stopped_at: Phase 6 UI-SPEC approved (host controls panel + remove-player selection flow + RTL audit checklist); ready for /gsd-plan-phase 6
+last_updated: "2026-09-07T17:10:00.000Z"
 last_activity: 2026-09-07
-last_activity_desc: Phase 06 (Host Controls & RTL Interface Hardening) context captured
-state_head: 03753d5
+last_activity_desc: Phase 06 UI-SPEC approved after one revision (typography scope)
+state_head: 21359ec
 progress:
   total_phases: 9
   completed_phases: 5
