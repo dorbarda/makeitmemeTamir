@@ -227,6 +227,17 @@ li {
   font-weight: 700;
 }
 
+/* ROUND-06/D-01 — the photo swap button. An outlined secondary button so it
+   reads as visually secondary to the primary filled "send caption" button
+   and is never tapped by mistake, while still inheriting the global
+   button rule's 44px tap-target floor. */
+.swap-photo-button {
+  background: transparent;
+  border: 1px solid currentColor;
+  color: inherit;
+  margin: 0 0 0.75rem;
+}
+
 /* VOTE-01/03/04 — the per-meme rating step. Mobile-first, no fixed widths,
    same shape as .writing-panel. */
 .rating-panel {
@@ -273,6 +284,14 @@ li {
    letter-spacing on the Hebrew text. */
 .round-end-entry {
   overflow-wrap: break-word;
+}
+
+/* VOTE-06 — the real point total, matching .writing-progress's existing
+   "important number" emphasis style. No letter-spacing on Hebrew/digit
+   text, per project convention. */
+.round-end-score {
+  font-weight: 600;
+  word-spacing: 0.1em;
 }
 
 /* D-01 — the player's own photo during WRITING, and the current meme's photo

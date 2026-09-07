@@ -23,6 +23,7 @@ export const HEBREW_ERRORS: Record<ErrorCode, string> = {
   ALREADY_RATED: "כבר דירגת את התמונה הזו",
   CANNOT_RATE_OWN: "אי אפשר לדרג את התמונה של עצמך",
   RATING_OUT_OF_RANGE: "הדירוג חייב להיות בין 1 ל-3",
+  SWAP_ALREADY_USED: "כבר החלפת תמונה בסיבוב הזה",
 };
 
 export const HEBREW_UI = {
@@ -83,4 +84,7 @@ export const HEBREW_UI = {
   ratingTierMeh: "תמיר בפאניקה",
   photoAlt: "תמונה של תמיר",
   scoreboardHeading: "טבלת הניקוד",
+  // plan 04-01 — photo swap button and real ranked round-results score
+  swapPhotoButton: "החלפת תמונה",
+  roundResultsPointsSuffix: "נקודות",
 };

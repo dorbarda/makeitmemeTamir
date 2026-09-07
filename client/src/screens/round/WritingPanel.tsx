@@ -74,12 +74,46 @@ export function WritingPanel({ snapshot }: WritingPanelProps) {
     socket.emit(CLIENT_EVENTS.submitCaption, { text: caption });
   }
 
+  /** ROUND-06/D-01 — swaps the assigned photo instantly, no preview. Copies
+   * handleSubmit's own once-listener/cleanup shape and reuses the same
+   * error state — no optimistic mutation; the swap only becomes visible
+   * once the next snapshot's yourPhotoUrl changes. */
+  function handleSwap() {
+    setError(undefined);
+
+    const socket = getSocket();
+    const onError = (err: ProtocolError) => {
+      setError(HEBREW_ERRORS[err.code]);
+      cleanup();
+    };
+    const onState = () => {
+      cleanup();
+    };
+    function cleanup() {
+      socket.off(SERVER_EVENTS.error, onError);
+      socket.off(SERVER_EVENTS.state, onState);
+    }
+
+    socket.once(SERVER_EVENTS.error, onError);
+    socket.once(SERVER_EVENTS.state, onState);
+    socket.emit(CLIENT_EVENTS.swapPhoto, {});
+  }
+
   const progress = snapshot.progress;
 
   return (
     <section className="writing-panel">
       {snapshot.yourPhotoUrl && (
         <img className="meme-photo" src={snapshot.yourPhotoUrl} alt={HEBREW_UI.photoAlt} />
+      )}
+      {snapshot.youCanSwapPhoto && (
+        <button
+          type="button"
+          className="swap-photo-button"
+          onClick={handleSwap}
+        >
+          {HEBREW_UI.swapPhotoButton}
+        </button>
       )}
 
       {snapshot.youSubmitted ? (

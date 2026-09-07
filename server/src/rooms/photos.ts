@@ -77,3 +77,38 @@ export function assignPhotos(
   });
   return assignments;
 }
+
+/** A single uniform random pick from `pool` — no shuffle needed for one draw.
+ * Every caller in Room.ts guarantees a non-empty `pool`. */
+export function drawOnePhoto(pool: string[]): string {
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+/**
+ * ROUND-02's per-player draw: each player's photo is drawn only from their
+ * OWN eligible pool (the photos they have not yet seen this game), rather
+ * than one pool shared across the whole room the way `assignPhotos` does.
+ * For each `[playerId, eligiblePool]` entry, in the map's own iteration
+ * order, shuffles that player's own eligible pool and takes the first
+ * filename not already claimed by an earlier player in this same call
+ * (`usedThisRound`) — falling back to the shuffled result's own first entry
+ * if every one of this player's eligible photos was already claimed (the
+ * accepted degradation once players outnumber the eligible pool: a repeat
+ * within one round, never a gap, never a crash). Leaves `assignPhotos`
+ * itself completely unchanged.
+ */
+export function assignPhotosFromEligiblePools(
+  eligiblePoolsByPlayer: ReadonlyMap<string, string[]>,
+): Map<string, string> {
+  const usedThisRound = new Set<string>();
+  const assignments = new Map<string, string>();
+
+  for (const [playerId, eligiblePool] of eligiblePoolsByPlayer) {
+    const shuffled = shuffle(eligiblePool);
+    const chosen = shuffled.find((filename) => !usedThisRound.has(filename)) ?? shuffled[0];
+    usedThisRound.add(chosen);
+    assignments.set(playerId, chosen);
+  }
+
+  return assignments;
+}

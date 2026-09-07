@@ -28,7 +28,7 @@ import {
   WRITING_SECONDS_PRESETS,
 } from "../config.js";
 import { defaultSettings, isPresetValue } from "./gameSettings.js";
-import { assignPhotos, photoUrl } from "./photos.js";
+import { PHOTO_FILENAMES, assignPhotosFromEligiblePools, drawOnePhoto, photoUrl } from "./photos.js";
 import { buildRotation, eligibleRaters } from "./rotation.js";
 import { normalizeForCompare } from "../names/nameValidation.js";
 import type { Player } from "../players/Player.js";
@@ -66,6 +66,12 @@ export type SubmitRatingOutcome =
       ok: false;
       error: "WRONG_PHASE" | "CANNOT_RATE_OWN" | "ALREADY_RATED" | "RATING_OUT_OF_RANGE";
     };
+
+/** Result of a swap-photo attempt — never throws, always tells the caller
+ * why. Shaped exactly like the other outcome types (ROUND-06, D-01, D-02). */
+export type SwapPhotoOutcome =
+  | { ok: true; photoUrl: string }
+  | { ok: false; error: "WRONG_PHASE" | "ALREADY_SUBMITTED" | "SWAP_ALREADY_USED" };
 
 export class Room {
   readonly code: string;
@@ -119,6 +125,15 @@ export class Room {
    * `enterWriting()` via `assignPhotos`; a player who joins after that has
    * already run gets a lazy fallback draw via `photoUrlFor`. */
   photoAssignments = new Map<string, string>();
+  /** ROUND-02 — every photo filename a player has ever been shown this game,
+   * across every round. Never cleared at `enterWriting()`; only a single
+   * player's own set is cleared (via `eligiblePoolFor`) once they have seen
+   * every photo currently in the pool, per CONTEXT.md's graceful-reset
+   * discretion. */
+  photosSeenByPlayer = new Map<string, Set<string>>();
+  /** ROUND-06/D-02 — the playerIds who have already used this round's one
+   * swap. Cleared every `enterWriting()`, exactly like `submissions`. */
+  swapUsed = new Set<string>();
 
   /**
    * Invoked whenever a delayed internal timer (a roster fade, and later a
@@ -481,27 +496,111 @@ export class Room {
     this.stepIndex = -1;
     this.ratings.clear();
     this.eligibleAtClose.clear();
-    this.photoAssignments = assignPhotos([...this.players.keys()]);
+    this.swapUsed.clear();
+    this.photoAssignments = this.drawPhotosForRound([...this.players.keys()]);
     this.schedulePhase(Date.now() + this.settings.writingSeconds * 1000, () =>
       this.closeWriting(),
     );
   }
 
   /**
+   * ROUND-02 — `playerId`'s currently-eligible photo pool: `pool` filtered
+   * down to filenames they have not yet seen this game. If they have no
+   * seen-set yet, or `pool` filtered against it comes back empty (they have
+   * now seen every photo currently in `pool`), resets their seen-set
+   * (CONTEXT.md's Claude's Discretion: graceful degradation over crashing or
+   * stalling once the pool is exhausted) and returns `pool` unchanged.
+   */
+  private eligiblePoolFor(playerId: string, pool: string[] = PHOTO_FILENAMES): string[] {
+    const seen = this.photosSeenByPlayer.get(playerId);
+    if (!seen || seen.size === 0) return pool;
+
+    const eligible = pool.filter((filename) => !seen.has(filename));
+    if (eligible.length === 0) {
+      seen.clear();
+      return pool;
+    }
+    return eligible;
+  }
+
+  /** Records that `playerId` has now been shown `filename` this game
+   * (ROUND-02). Gets or creates that player's own seen-set. */
+  private markPhotoSeen(playerId: string, filename: string): void {
+    let seen = this.photosSeenByPlayer.get(playerId);
+    if (!seen) {
+      seen = new Set<string>();
+      this.photosSeenByPlayer.set(playerId, seen);
+    }
+    seen.add(filename);
+  }
+
+  /**
+   * ROUND-02's per-player draw for a round (or a lazy late-joiner draw):
+   * builds each player's own eligible pool, draws one photo per player via
+   * `assignPhotosFromEligiblePools`, then records every resulting photo as
+   * seen before returning the assignment map.
+   */
+  private drawPhotosForRound(playerIds: string[]): Map<string, string> {
+    const eligiblePools = new Map<string, string[]>();
+    for (const playerId of playerIds) {
+      eligiblePools.set(playerId, this.eligiblePoolFor(playerId));
+    }
+    const assignments = assignPhotosFromEligiblePools(eligiblePools);
+    for (const [playerId, filename] of assignments) {
+      this.markPhotoSeen(playerId, filename);
+    }
+    return assignments;
+  }
+
+  /**
    * D-01 — this round's photo for `playerId`, drawn from `photoAssignments`.
    * A player who joins after this round's `enterWriting()` already ran has
    * no entry there (nothing today prevents a mid-round join); this lazily
-   * draws one, caches it, and returns it either way, so `snapshotFor` never
-   * has to render an empty `<img src>` for anyone currently in WRITING or
-   * RATING.
+   * draws one (honoring the same ROUND-02 seen-photo tracking as a normal
+   * round draw), caches it, and returns it either way, so `snapshotFor`
+   * never has to render an empty `<img src>` for anyone currently in WRITING
+   * or RATING.
    */
   private photoUrlFor(playerId: string): string {
     let filename = this.photoAssignments.get(playerId);
     if (!filename) {
-      filename = assignPhotos([playerId]).get(playerId)!;
+      filename = this.drawPhotosForRound([playerId]).get(playerId)!;
       this.photoAssignments.set(playerId, filename);
     }
     return photoUrl(filename);
+  }
+
+  /**
+   * Swaps `playerId`'s currently assigned photo for a new one, instantly and
+   * with no preview (D-01). Refused with `WRONG_PHASE` outside WRITING,
+   * `ALREADY_SUBMITTED` once this player's caption has locked in this
+   * round's photo (D-02), and `SWAP_ALREADY_USED` on a second attempt in the
+   * same round. Draws from the player's own eligible (not-yet-seen) pool,
+   * excluding their current photo so a swap is never a no-op — falling back
+   * to the full eligible pool if the current photo was their only eligible
+   * option.
+   */
+  swapPhoto(playerId: string): SwapPhotoOutcome {
+    if (this.phase !== "WRITING") {
+      return { ok: false, error: "WRONG_PHASE" };
+    }
+    if (this.submissions.has(playerId)) {
+      return { ok: false, error: "ALREADY_SUBMITTED" };
+    }
+    if (this.swapUsed.has(playerId)) {
+      return { ok: false, error: "SWAP_ALREADY_USED" };
+    }
+
+    const currentFilename = this.photoAssignments.get(playerId);
+    const eligible = this.eligiblePoolFor(playerId);
+    const withoutCurrent = eligible.filter((filename) => filename !== currentFilename);
+    const pool = withoutCurrent.length > 0 ? withoutCurrent : eligible;
+    const filename = drawOnePhoto(pool);
+
+    this.photoAssignments.set(playerId, filename);
+    this.markPhotoSeen(playerId, filename);
+    this.swapUsed.add(playerId);
+    return { ok: true, photoUrl: photoUrl(filename) };
   }
 
   /**
@@ -687,25 +786,28 @@ export class Room {
    * empty edge, D-10). For each step in `rotation`, in the same order the
    * memes were shown, carries the author's id and current name, the
    * caption, the raw rating values that step received (never a default for
-   * a silent rater), and the eligible-rater count recorded at the moment
-   * that step closed. Deliberately does NOT reduce `ratings` to a score:
-   * D-10 flagged that a meme rated while some eligible raters were away
-   * would score lower purely by bad luck of timing, and whether the answer
-   * is a sum, an average or a floor is a Phase 4 scoring decision this
-   * engine must not pre-empt — it only guarantees both numbers are exposed.
-   * A round that skipped rating (D-09) yields an empty `entries` array,
-   * never null and never a fabricated entry.
+   * a silent rater), the eligible-rater count recorded at the moment that
+   * step closed, and — as of VOTE-06 (plan 04-01) — that meme's real total
+   * score: a plain sum of `ratings`, computed once here so no other file
+   * ever re-derives a meme's score from its raw ratings array. D-10 flagged
+   * that a meme rated while some eligible raters were away would score lower
+   * purely by bad luck of timing; VOTE-06 accepted that tradeoff (a sum,
+   * highest first) rather than an average or a floor. A round that skipped
+   * rating (D-09) yields an empty `entries` array, never null and never a
+   * fabricated entry.
    */
   private buildRoundEndView(): RoundEndView {
     const entries: RoundEndEntry[] = this.rotation.map((authorId, index) => {
       const author = this.players.get(authorId);
       const stepRatings = this.ratings.get(index);
+      const values = stepRatings ? [...stepRatings.values()] : [];
       return {
         authorId,
         authorName: author?.name ?? "",
         caption: this.submissions.get(authorId) ?? "",
-        ratings: stepRatings ? [...stepRatings.values()] : [],
+        ratings: values,
         eligibleAtClose: this.eligibleAtClose.get(index) ?? 0,
+        score: values.reduce((sum, value) => sum + value, 0),
       };
     });
     return { entries };
@@ -805,6 +907,10 @@ export class Room {
       // D-01 — this player's own assigned photo for the round, never a
       // placeholder.
       yourPhotoUrl: inWriting && you ? this.photoUrlFor(playerId) : null,
+      // ROUND-06/D-02 — true only during WRITING, before this player has
+      // submitted or already used this round's one swap.
+      youCanSwapPhoto:
+        inWriting && !this.submissions.has(playerId) && !this.swapUsed.has(playerId),
       ratingStep,
       // T-02-20 — populated only for ROUND_END and GAME_END, so the full
       // caption/rating set for the round never travels early (D-14's

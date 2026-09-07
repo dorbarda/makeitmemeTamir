@@ -71,6 +71,9 @@ export type RoundEndEntry = {
   caption: string;
   ratings: RatingValue[];
   eligibleAtClose: number;
+  // VOTE-06 (plan 04-01) — the server-computed sum of `ratings`, added once
+  // inside buildRoundEndView and never re-derived client-side.
+  score: number;
 };
 
 export type RoundEndView = { entries: RoundEndEntry[] };
@@ -96,6 +99,9 @@ export type LobbySnapshot = {
   progress: SubmissionProgress | null; // filled by plan 02-03
   youSubmitted: boolean; // filled by plan 02-03
   yourPhotoUrl: string | null; // filled by plan 03-01 — this player's own assigned photo (D-01)
+  // ROUND-06/D-01/D-02 (plan 04-01) — true only during WRITING, before this
+  // player has submitted or already used this round's one swap.
+  youCanSwapPhoto: boolean;
   ratingStep: RatingStepView | null; // filled by plan 02-04
   roundEnd: RoundEndView | null; // filled by plan 02-05
 };
@@ -118,7 +124,8 @@ export type ErrorCode =
   | "ALREADY_SUBMITTED"
   | "ALREADY_RATED"
   | "CANNOT_RATE_OWN"
-  | "RATING_OUT_OF_RANGE";
+  | "RATING_OUT_OF_RANGE"
+  | "SWAP_ALREADY_USED";
 
 export type ProtocolError = { code: ErrorCode; messageHe: string };
 
@@ -132,6 +139,7 @@ export const CLIENT_EVENTS = {
   changeSettings: "change-settings", // { key: SettingKey, value: number }  (added in plan 02-01; wired in 02-02)
   submitCaption: "submit-caption", // { text: string }  (added in plan 02-01; wired in 02-03)
   submitRating: "submit-rating", // { stepIndex: number, value: RatingValue }  (added in plan 02-01; wired in 02-04)
+  swapPhoto: "swap-photo", // {}  — host-blind, no payload; ROUND-06 (added in plan 04-01)
 } as const;
 
 export const SERVER_EVENTS = {
