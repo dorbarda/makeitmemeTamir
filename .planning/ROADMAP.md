@@ -152,7 +152,28 @@ Plans:
   1. A realistic caption mixing Hebrew, digits, and a Latin word is drawn onto the photo and reads correctly right-to-left, confirmed by visually inspecting the actual output image — not just a single clean Hebrew test word
   2. A player can save the finished meme image to their phone or share it directly, with the save/share flow specifically confirmed working on a real iPhone in Safari
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 05-01-PLAN.md — Wire contract: server accepts, validates, and stores `meme` (base64 PNG) in place of `caption`+`photoUrl`
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 05-02-PLAN.md — The tracer: single-box canvas compositor in WritingPanel, rasterize, submit as meme, rendered identically in RatingPanel/RoundEndPanel/GameEndPanel
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 05-03-PLAN.md — Multi-box drag editor: up to 3 caption boxes, pointer-event drag-and-drop, hit-testing
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 05-04-PLAN.md — Save/share for every author, plus best-of-night view/export reuse (D-03)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 05-05-PLAN.md — Full regression and the real-device check (touch-drag, HEB-03 RTL rendering, iOS save/share)
 
 ### Phase 6: Host Controls & RTL Interface Hardening
 
@@ -220,7 +241,7 @@ natural requirement-coverage position.)
 | 2. Server-Authoritative Round Engine | 5/5 | Complete | 2026-09-06 |
 | 3. Core Loop Checkpoint (Real Phones, End-to-End) | 1/1 | Complete | 2026-09-06 |
 | 4. Full Round, Rating & Scoring Completion | 2/2 | Complete | 2026-09-07 |
-| 5. Hebrew RTL Meme Compositor & Souvenir | 0/TBD | Not started | - |
+| 5. Hebrew RTL Meme Compositor & Souvenir | 0/5 | Not started | - |
 | 6. Host Controls & RTL Interface Hardening | 0/TBD | Not started | - |
 | 7. Deployment & Hosting | 0/TBD | Not started | - |
 | 8. Load & Capacity Verification | 0/TBD | Not started | - |
