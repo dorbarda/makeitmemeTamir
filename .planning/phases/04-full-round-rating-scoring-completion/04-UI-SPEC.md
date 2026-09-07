@@ -45,11 +45,11 @@ Declared values (must be multiples of 4):
 - Form `gap`: 1rem (md — 16px)
 - List `gap`: 0.5rem (sm — 8px) 
 - H1 `margin-bottom`: 1.25rem (20px)
-- Input/button padding: 0.625rem (10px) vertical × 0.875rem (14px) horizontal — preserves 44px minimum tap target (2.75rem/44px min-height)
+- Input/button padding: 0.5rem (8px) vertical × 1rem (16px) horizontal — preserves 44px minimum tap target via explicit min-height: 44px
 - Settings/rating tier gap: 0.5rem (sm — 8px), wrap never scroll
 - Label gap: 0.5rem (sm — 8px)
 
-Exceptions: None. All spacing follows 4px multiples or established ratio-based padding in form controls.
+Exceptions: None. All spacing follows 4px multiples or explicit height rules for tap targets.
 
 ---
 
@@ -58,15 +58,16 @@ Exceptions: None. All spacing follows 4px multiples or established ratio-based p
 | Role | Size | Weight | Line Height | Notes |
 |------|------|--------|-------------|-------|
 | Body | 16px | 400 | 1.5 | Root size locked at 16px (iOS Safari zoom floor on form fields) |
-| Label | 16px | 600 | 1.5 | Bold weight for form labels, countdown, preset buttons |
+| Label | 16px | 700 | 1.5 | Bold weight for form labels, countdown, preset buttons |
 | Heading | 24–32px | 700 | 1.2 | H1 uses `clamp(1.5rem, 7vw, 2rem)` for responsive scaling, never fixed width |
-| Emphasis | 16px | 700–800 | 1.5 | Countdown urgent state: 1.125rem + weight 800, no layout shift |
+| Emphasis | 16px | 700 | 1.5 | Countdown urgent state: use larger font-size + color (red #dc2626) instead of weight to signal urgency, no layout shift |
 
 **Applied throughout:**
 - No `letter-spacing` on Hebrew text (breaks letterforms per project convention)
 - `word-spacing: 0.1em` used instead for subtle Hebrew emphasis where needed
 - Long Hebrew words/captions: `overflow-wrap: break-word` prevents layout overflow on narrow screens
 - Font stack: `system-ui, sans-serif` (no custom font loading yet; Heebo/Assistant planned for Phase 5+ canvas work)
+- **Weight reduction:** Only 2 weights declared (400 regular, 700 bold); emphasis and urgency achieved through size and color, not additional weight steps
 
 ---
 
@@ -97,10 +98,10 @@ Exceptions: None. All spacing follows 4px multiples or established ratio-based p
 | Rating tier (2 — fine) | "חייכתי" (I smiled) | Hebrew | D-04, 04-CONTEXT.md |
 | Rating tier (1 — meh) | "אה, בסדר" (eh, okay) | Hebrew | D-04, 04-CONTEXT.md |
 | Author wait state | "ממתין לדירוגים..." (waiting for ratings...) | Hebrew | D-09, 04-CONTEXT.md |
-| Empty state (no photos assigned) | (Not yet written — executor will add as needed) | Hebrew | Backstop |
+| Empty state (no photos assigned) | "טוען תמונה..." (loading photo...) | Hebrew | Backstop — defensive state if pool exhausted mid-round (per D-06 LRU fallback) |
 | Round results heading | "הסיבוב הסתיים" (round ended) | Hebrew | From HEBREW_UI |
 | Final winner heading | "המשחק נגמר" (game ended) | Hebrew | From HEBREW_UI |
-| Best-of-night heading | (Not yet written — executor will add) | Hebrew | Backstop |
+| Best-of-night heading | "הטובים ביותר בערב" (the best of the evening) | Hebrew | D-03, 04-CONTEXT.md |
 | Destructive action | (None in Phase 4 scope) | – | Out of scope (Phase 6 host controls) |
 
 **All copywriting MUST be added to `shared/messages.ts` `HEBREW_UI` object, never inline in components.** Phase 2 established this pattern; Phase 4 extends it with the new strings above.
@@ -132,13 +133,13 @@ Not applicable. This project uses custom CSS only; no design-system package regi
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS (not applicable)
-- [ ] Dimension 7 Inventory Provenance: PASS (not applicable)
+- [x] Dimension 1 Copywriting: PASS (all copy now declared)
+- [x] Dimension 2 Visuals: PASS (focal points declared per screen)
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS (exactly 2 weights: 400, 700)
+- [x] Dimension 5 Spacing: PASS (all values on 4px scale, tap targets via explicit min-height)
+- [x] Dimension 6 Registry Safety: PASS (not applicable)
+- [x] Dimension 7 Inventory Provenance: PASS (not applicable)
 
 **Approval:** pending
 
@@ -149,12 +150,14 @@ Not applicable. This project uses custom CSS only; no design-system package regi
 **What executor will implement in Phase 4 screens:**
 
 1. **Photo Assignment & Swap Screen**
+   - **Focal point:** Tamir photo (dominant visual)
    - Display assigned Tamir photo (fetched from `client/public/tamir-photos/`)
    - "Swap Photo" button → pick 1 alternative from available pool (tracked per-room)
    - Swap button disabled after first swap in that round
-   - Tap target min 44px height (2.75rem)
+   - Tap target min 44px height via explicit `min-height: 44px`
 
 2. **Caption Writing Screen (Real Content)**
+   - **Focal point:** Photo at top, then textarea below for caption writing
    - Photo at top (responsive, responsive width, safe inset)
    - Textarea for Hebrew caption (already styled in index.css as `.writing-panel textarea`)
    - Write count: "(X of Y) מתוך Y שלחו" — from established `HEBREW_UI.submittedProgressSuffix`
@@ -162,15 +165,17 @@ Not applicable. This project uses custom CSS only; no design-system package regi
    - No changes to existing timer/countdown display (Phase 2 baseline)
 
 3. **Per-Meme Rating Screen**
+   - **Focal point:** Rating tier buttons (3 large tap targets dominate lower half)
    - Photo + caption at top (same layout as writing screen for consistency)
    - If player is author: show `.author-wait-state` div with caption, "ממתין לדירוגים..." message, no buttons
    - If player is rater: show `.rating-tiers` (three tap targets, already styled in index.css):
-     - Button 1: "מת מצחוק" (weight 700, font-size 1.25rem, min-height 2.75rem)
+     - Button 1: "מת מצחוק" (weight 700, font-size 1.25rem, min-height 44px)
      - Button 2: "חייכתי" (same styling)
      - Button 3: "אה, בסדר" (same styling)
    - Ratings stay hidden until this meme's step closes (server enforces; UI never shows partial tallies)
 
 4. **Round Results Screen (D-10)**
+   - **Focal point:** Ranked meme list (highest-scoring meme at top, staggered reveal)
    - Heading: "הסיבוב הסתיים" (from existing HEBREW_UI)
    - List of memes, ranked by total score (highest first)
    - Each row: meme thumbnail (same size as writing/rating screens), caption, author name, rank, total points
@@ -179,12 +184,14 @@ Not applicable. This project uses custom CSS only; no design-system package regi
    - Use `.round-end-entry` class styling (already defined in index.css, handles long Hebrew captions with wrap)
 
 5. **Running Scoreboard (Between Rounds)**
+   - **Focal point:** Player names and running totals (sorted by score, highest first)
    - Heading: "ההערכות" or "לוח התוצאות" (exact wording TBD, add to HEBREW_UI)
    - Table/list: Player name, running total (sum of round scores so far), sorted highest first
    - Min-height rows to keep tap targets visible if used for any interaction (future phase)
    - Update immediately after each round's results screen is dismissed
 
 6. **Final Winner Screen (D-11)**
+   - **Focal point:** Winner's name + final score (largest, most prominent text)
    - Heading: "המשחק נגמר" (from existing HEBREW_UI)
    - Highlight: Winner's name + final score (largest, most prominent)
    - Below: Full scoreboard (same as "between rounds" scoreboard, all players + final totals)
@@ -192,7 +199,8 @@ Not applicable. This project uses custom CSS only; no design-system package regi
    - Plain, unadorned layout matching round results screen style
 
 7. **Best-of-Night Screen (D-03)**
-   - Heading: (TBD, add to HEBREW_UI — e.g., "הטובים ביותר בערב")
+   - **Focal point:** Top 3 memes in a scrollable list (photo, caption, score per entry)
+   - Heading: "הטובים ביותר בערב" (the best of the evening) — add to HEBREW_UI
    - Display: Top 3 highest-scoring memes from entire game
    - Each entry: photo + caption + author name + final score + which round it was from
    - Same styling as round results entries
@@ -207,7 +215,7 @@ Not applicable. This project uses custom CSS only; no design-system package regi
 
 2. **No New CSS Classes Strictly Required**: The executor should maximize reuse of existing `.writing-panel`, `.rating-tiers`, `.rating-tier`, `.round-end-panel`, `.round-end-entry`, `.countdown` classes. New classes (e.g., `.author-wait-state`, `.scoreboard-row`) may be added if needed, but should follow established naming and spacing conventions.
 
-3. **Hebrew Strings**: All player-facing copy must be added to `shared/messages.ts` `HEBREW_UI` object before use. The three rating tier names (D-04) and author wait message (D-09) are locked decisions; other strings (scoreboard heading, best-of-night heading, etc.) should be added as placeholders and reviewed for tone consistency with existing UI.
+3. **Hebrew Strings**: All player-facing copy must be added to `shared/messages.ts` `HEBREW_UI` object before use. The three rating tier names (D-04) and author wait message (D-09) are locked decisions; best-of-night heading and empty-state copy are now declared in this spec; other strings (scoreboard heading, etc.) should be added as placeholders and reviewed for tone consistency with existing UI.
 
 4. **Responsive Images**: Use `max-width: 100%`, `height: auto` for all photo displays (meme photos in round results, best-of-night, etc.). Never use fixed pixel widths that could overflow a narrow phone screen.
 
@@ -218,6 +226,8 @@ Not applicable. This project uses custom CSS only; no design-system package regi
 7. **Photo Pool Logic**: Server owns photo assignment and swap tracking; client displays the assigned photo. Phase 4 does not need to render the photo-selection/swap UI beyond a "Swap Photo" button. The full photo-pool UI (picking an alternative) may be delegated to Phase 4's interaction/planner if time allows.
 
 8. **No Database Required**: All state (photos assigned, captions, ratings, scores) lives in memory on the server (`Room.ts` object + snapshot distribution to clients). No new persistence layer needed.
+
+9. **Tap Target Minimum**: All interactive elements (buttons, rating tiers, scoreboard rows) must have a minimum height of 44px (2.75rem) to meet mobile accessibility standards. Achieve this via explicit `min-height: 44px` on the element or container, not by relying on padding alone. Padding on interactive elements is now 8px vertical × 16px horizontal (both 4px-scale multiples).
 
 ---
 
@@ -233,4 +243,3 @@ Not applicable. This project uses custom CSS only; no design-system package regi
 | CLAUDE.md | Font: Heebo/Assistant via @fontsource | Planned; not yet imported; fallback to system-ui |
 | CLAUDE.md | RTL base: `dir="rtl"` at app root | Already in place, extend to new screens |
 | CLAUDE.md | Canvas compositing: `ctx.direction='rtl'` | Phase 5 responsibility; note for integration |
-
