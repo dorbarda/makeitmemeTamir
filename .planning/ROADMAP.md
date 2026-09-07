@@ -157,7 +157,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 05-01-PLAN.md — Wire contract: server accepts, validates, and stores `meme` (base64 PNG) in place of `caption`+`photoUrl`
+- [x] 05-01-PLAN.md — Wire contract: server accepts, validates, and stores `meme` (base64 PNG) in place of `caption`+`photoUrl`
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
