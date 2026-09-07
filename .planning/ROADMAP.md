@@ -140,6 +140,7 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 04-02-PLAN.md — Running score display, the tied-winner screen, and the incrementally-tracked best-of-the-night screen
+
 **UI hint**: yes
 
 ### Phase 5: Hebrew RTL Meme Compositor & Souvenir
@@ -187,8 +188,21 @@ Plans:
   3. Every screen in the app reads correctly right-to-left in Hebrew, confirmed by reading each screen aloud in Hebrew word order on a real phone
   4. Typing a Hebrew caption works correctly on both a real iPhone keyboard and a real Android keyboard
 
-**Plans**: TBD
+**Plans**: 3 plans
 **UI hint**: yes
+
+Plans:
+**Wave 1**
+
+- [ ] 06-01-PLAN.md — Server-side host recovery actions: skip round, remove player, end game, restart game
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 06-02-PLAN.md — Host Controls panel: the three-action confirm modal and the remove-player two-step flow
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 06-03-PLAN.md — Full regression, RTL audit, Hebrew keyboard, and host-controls real-device checkpoint
 
 ### Phase 7: Deployment & Hosting
 
@@ -242,7 +256,7 @@ natural requirement-coverage position.)
 | 3. Core Loop Checkpoint (Real Phones, End-to-End) | 1/1 | Complete | 2026-09-06 |
 | 4. Full Round, Rating & Scoring Completion | 2/2 | Complete | 2026-09-07 |
 | 5. Hebrew RTL Meme Compositor & Souvenir | 5/5 | Complete | 2026-09-07 |
-| 6. Host Controls & RTL Interface Hardening | 0/TBD | Not started | - |
+| 6. Host Controls & RTL Interface Hardening | 0/3 | Planned    |  |
 | 7. Deployment & Hosting | 0/TBD | Not started | - |
 | 8. Load & Capacity Verification | 0/TBD | Not started | - |
 | 9. Real-Device Rehearsal | 0/TBD | Not started | - |
