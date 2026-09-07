@@ -92,4 +92,8 @@ export const HEBREW_UI = {
   winnerHeading: "המנצחים",
   bestOfNightHeading: "המצחיקים של הערב",
   bestOfNightEmpty: "עדיין אין מספיק דירוגים כדי לבחור את המצחיקים של הערב",
+  // plan 05-03 — multi-box drag editor
+  memeEditorInstructions: "גררו כל כיתוב למקום הרצוי על התמונה",
+  addCaptionBoxButton: "הוספת כיתוב",
+  deleteCaptionButton: "מחיקה",
 };

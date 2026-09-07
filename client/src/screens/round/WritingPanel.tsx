@@ -18,6 +18,12 @@ import {
   CANVAS_WIDTH,
   CANVAS_HEIGHT,
 } from "../../canvas/compositor.js";
+import {
+  getBoxAtPoint,
+  clampBoxPosition,
+  nextBoxPosition,
+  canAddBox,
+} from "../../canvas/hitTest.js";
 
 // A purely client-side UX cap on how much text one caption box can
 // reasonably hold once drawn onto a fixed-size image — it no longer mirrors
@@ -49,15 +55,15 @@ type WritingPanelProps = {
 
 /**
  * The writing phase's own screen (D-01, D-02): the player's own real assigned
- * photo of Tamir is composed live on a canvas with one caption box drawn on
- * top, and submitting rasterizes that exact canvas to a base64 PNG sent as
- * `meme` — the tracer proving the rasterize-and-transmit pipeline
- * (RESEARCH.md) end to end before Wave 3 adds drag/add/remove for up to 3
- * boxes (D-05). No optimistic state: this panel only flips to the submitted
- * view once the next snapshot says `youSubmitted` — the server is the sole
- * authority, exactly like `Lobby.tsx`'s `handleRename` round-trip. Nothing
- * here ever renders another player's caption text, because the snapshot
- * never carries one (D-14).
+ * photo of Tamir is composed live on a canvas with up to 3 draggable caption
+ * boxes (D-05) drawn on top, and submitting rasterizes that exact canvas to
+ * a base64 PNG sent as `meme` — the rasterize-and-transmit pipeline
+ * (RESEARCH.md) plus pointer-event drag-and-drop (setPointerCapture,
+ * getBoxAtPoint hit-testing) for the full MEME-01 scope. No optimistic
+ * state: this panel only flips to the submitted view once the next snapshot
+ * says `youSubmitted` — the server is the sole authority, exactly like
+ * `Lobby.tsx`'s `handleRename` round-trip. Nothing here ever renders another
+ * player's caption text, because the snapshot never carries one (D-14).
  */
 export function WritingPanel({ snapshot }: WritingPanelProps) {
   const [boxes, setBoxes] = useState<CaptionBox[]>([
@@ -70,8 +76,45 @@ export function WritingPanel({ snapshot }: WritingPanelProps) {
   ]);
   const [error, setError] = useState<string | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const dragOffsetRef = useRef({ x: 0, y: 0 });
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const photoRef = useRef<HTMLImageElement | null>(null);
+
+  /** Scales client (CSS-pixel) pointer coordinates by canvas.width/rect.width
+   * before comparing against box positions, which are always in the
+   * canvas's own intrinsic pixel space (RESEARCH.md's documented gotcha —
+   * .meme-canvas is CSS-scaled via `width: 100%`). */
+  function getCanvasPoint(e: React.PointerEvent<HTMLCanvasElement>): { x: number; y: number } {
+    const canvas = e.currentTarget;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+  }
+
+  function handlePointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
+    const point = getCanvasPoint(e);
+    const hitId = getBoxAtPoint(boxes, point.x, point.y);
+    if (!hitId) return;
+    const box = boxes.find((b) => b.id === hitId)!;
+    dragOffsetRef.current = { x: point.x - box.x, y: point.y - box.y };
+    setDraggingId(hitId);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+
+  function handlePointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!draggingId) return;
+    const point = getCanvasPoint(e);
+    const offset = dragOffsetRef.current;
+    const { x, y } = clampBoxPosition(point.x - offset.x, point.y - offset.y);
+    setBoxes((prev) => prev.map((b) => (b.id === draggingId ? { ...b, x, y } : b)));
+  }
+
+  function handlePointerUp(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (draggingId) e.currentTarget.releasePointerCapture(e.pointerId);
+    setDraggingId(null);
+  }
 
   function redraw() {
     const canvas = canvasRef.current;
@@ -184,11 +227,16 @@ export function WritingPanel({ snapshot }: WritingPanelProps) {
 
   return (
     <section className="writing-panel">
+      <p className="meme-editor-instructions">{HEBREW_UI.memeEditorInstructions}</p>
       <canvas
         ref={canvasRef}
         width={CANVAS_WIDTH}
         height={CANVAS_HEIGHT}
         className="meme-canvas"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
       />
       {snapshot.youCanSwapPhoto && (
         <button
@@ -207,18 +255,47 @@ export function WritingPanel({ snapshot }: WritingPanelProps) {
         </>
       ) : (
         <form onSubmit={handleSubmit}>
-          <label>
-            {HEBREW_UI.captionPlaceholder}
-            <input
-              type="text"
-              value={boxes[0].text}
-              onChange={(e) =>
-                setBoxes([{ ...boxes[0], text: clampCaptionForInput(e.target.value) }])
+          {boxes.map((box) => (
+            <div className="caption-box-row" key={box.id}>
+              <input
+                type="text"
+                value={box.text}
+                onChange={(e) =>
+                  setBoxes(
+                    boxes.map((b) =>
+                      b.id === box.id
+                        ? { ...b, text: clampCaptionForInput(e.target.value) }
+                        : b,
+                    ),
+                  )
+                }
+                placeholder={HEBREW_UI.captionPlaceholder}
+              />
+              <span>{graphemesRemaining(box.text)}</span>
+              {boxes.length > 1 && (
+                <button
+                  type="button"
+                  className="caption-box-remove"
+                  onClick={() => setBoxes(boxes.filter((b) => b.id !== box.id))}
+                >
+                  {HEBREW_UI.deleteCaptionButton}
+                </button>
+              )}
+            </div>
+          ))}
+          {canAddBox(boxes.length) && (
+            <button
+              type="button"
+              onClick={() =>
+                setBoxes([
+                  ...boxes,
+                  { id: `box-${Date.now()}`, text: "", ...nextBoxPosition(boxes.length) },
+                ])
               }
-              placeholder={HEBREW_UI.captionPlaceholder}
-            />
-            <span>{graphemesRemaining(boxes[0].text)}</span>
-          </label>
+            >
+              {HEBREW_UI.addCaptionBoxButton}
+            </button>
+          )}
           <button type="submit" disabled={submitting}>
             {HEBREW_UI.sendCaptionButton}
           </button>
