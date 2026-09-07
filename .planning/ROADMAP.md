@@ -130,7 +130,16 @@ Plans:
   4. Each round's score accumulates into a running game total, and a final winner screen appears once the last round ends
   5. A "best of the night" screen shows the highest-scoring memes from across the whole game, tracked from round one rather than reconstructed at the end
 
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 04-01-PLAN.md — No-repeat photo tracking, the one-time photo swap, and real ranked round results (VOTE-05 verified, not rebuilt)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 04-02-PLAN.md — Running score display, the tied-winner screen, and the incrementally-tracked best-of-the-night screen
 **UI hint**: yes
 
 ### Phase 5: Hebrew RTL Meme Compositor & Souvenir
@@ -210,7 +219,7 @@ natural requirement-coverage position.)
 | 1. Room, Session & Reconnect Foundation | 4/4 | Complete | 2026-09-06 |
 | 2. Server-Authoritative Round Engine | 5/5 | Complete | 2026-09-06 |
 | 3. Core Loop Checkpoint (Real Phones, End-to-End) | 1/1 | Complete | 2026-09-06 |
-| 4. Full Round, Rating & Scoring Completion | 0/TBD | Not started | - |
+| 4. Full Round, Rating & Scoring Completion | 0/2 | Not started | - |
 | 5. Hebrew RTL Meme Compositor & Souvenir | 0/TBD | Not started | - |
 | 6. Host Controls & RTL Interface Hardening | 0/TBD | Not started | - |
 | 7. Deployment & Hosting | 0/TBD | Not started | - |
