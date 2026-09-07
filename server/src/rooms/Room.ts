@@ -19,6 +19,7 @@ import {
   BETWEEN_MEMES_MS,
   BETWEEN_PHASES_MS,
   HOST_TRANSFER_GRACE_MS,
+  MEME_MAX_BASE64_CHARS,
   MIN_PLAYERS_TO_START,
   MIN_SUBMISSIONS_TO_RATE,
   RATING_COLLAPSE_MS,
@@ -55,7 +56,10 @@ export type ChangeSettingOutcome =
  * caller why. Shaped exactly like RenameOutcome/StartGameOutcome. */
 export type SubmitCaptionOutcome =
   | { ok: true }
-  | { ok: false; error: "WRONG_PHASE" | "CAPTION_REQUIRED" | "ALREADY_SUBMITTED" };
+  | {
+      ok: false;
+      error: "WRONG_PHASE" | "CAPTION_REQUIRED" | "MEME_TOO_LARGE" | "ALREADY_SUBMITTED";
+    };
 
 /** Result of a submit-rating attempt — never throws, always tells the
  * caller why. Shaped exactly like RenameOutcome/StartGameOutcome/
@@ -74,6 +78,11 @@ export type SubmitRatingOutcome =
 export type SwapPhotoOutcome =
   | { ok: true; photoUrl: string }
   | { ok: false; error: "WRONG_PHASE" | "ALREADY_SUBMITTED" | "SWAP_ALREADY_USED" };
+
+// Standard, correctly-padded base64 — exactly what canvas.toBlob() ->
+// FileReader.readAsDataURL() -> stripping the "data:image/png;base64,"
+// prefix always produces (T-05-02).
+const BASE64_PATTERN = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
 
 export class Room {
   readonly code: string;
@@ -417,27 +426,40 @@ export class Room {
   }
 
   /**
-   * Records a player's caption for the current round (ROUND-04/ROUND-05).
-   * `text` must already be sanitized and truncated by the caller — this only
-   * enforces the round-engine rules: refused with `WRONG_PHASE` outside
-   * WRITING, `CAPTION_REQUIRED` for an empty prepared string, and
-   * `ALREADY_SUBMITTED` for a second attempt from the same player in the
-   * same round (T-02-14 — no replay can overwrite a stored caption or
-   * double-count progress). On success, checks whether every connected
-   * player has now submitted and collapses the deadline if so (D-07).
+   * Records a player's composited meme for the current round (ROUND-04/
+   * ROUND-05, RESEARCH.md's rasterize-and-transmit decision, D-01). `meme` is
+   * opaque, client-submitted, rasterized image data (a base64-encoded PNG) —
+   * this method itself validates it, matching `submitRating`'s own
+   * unknown-payload signature, since a meme is not text this method can
+   * usefully sanitize: refused with `WRONG_PHASE` outside WRITING,
+   * `CAPTION_REQUIRED` for a non-string/empty payload or one that isn't
+   * validly base64-shaped, `MEME_TOO_LARGE` for a payload over
+   * `MEME_MAX_BASE64_CHARS` (T-05-01), and `ALREADY_SUBMITTED` for a second
+   * attempt from the same player in the same round (T-02-14 — no replay can
+   * overwrite a stored meme or double-count progress). The server never
+   * verifies the PNG itself is well-formed — a malformed image just renders
+   * as a broken `<img>` client-side, an acceptable trade-off for speed
+   * (RESEARCH.md). On success, checks whether every connected player has now
+   * submitted and collapses the deadline if so (D-07).
    */
-  submitCaption(playerId: string, text: string): SubmitCaptionOutcome {
+  submitCaption(playerId: string, meme: unknown): SubmitCaptionOutcome {
     if (this.phase !== "WRITING") {
       return { ok: false, error: "WRONG_PHASE" };
     }
-    if (text.length === 0) {
+    if (typeof meme !== "string" || meme.length === 0) {
+      return { ok: false, error: "CAPTION_REQUIRED" };
+    }
+    if (meme.length > MEME_MAX_BASE64_CHARS) {
+      return { ok: false, error: "MEME_TOO_LARGE" };
+    }
+    if (!BASE64_PATTERN.test(meme)) {
       return { ok: false, error: "CAPTION_REQUIRED" };
     }
     if (this.submissions.has(playerId)) {
       return { ok: false, error: "ALREADY_SUBMITTED" };
     }
 
-    this.submissions.set(playerId, text);
+    this.submissions.set(playerId, meme);
     this.maybeCollapseWriting();
     return { ok: true };
   }
@@ -638,17 +660,17 @@ export class Room {
    * round that just closed. Walks `this.rotation` the same way
    * `applyRoundScores` does: a step with no entry in `this.ratings` (nobody
    * rated it) contributes nothing. For every rated step, pushes one entry
-   * carrying everything the client needs to render it (photo, caption,
+   * carrying everything the client needs to render it (the composited meme,
    * author, score), then re-sorts the whole list highest-score-first and
    * trims it to length 3. `Array.prototype.sort`'s stability means a later
    * round's meme with a score EQUAL to an already-surviving entry's score
    * never displaces it — the earlier-inserted survivor keeps the #3 slot,
    * matching D-03's own no-tiebreaker philosophy applied to this list's
    * eviction boundary. Must only ever be called from `enterRoundEnd()`
-   * (never later), since it calls `photoUrlFor(authorId)` while
-   * `photoAssignments` still holds THIS round's draw, before the next
-   * round's `enterWriting()` can overwrite it. Read-only with respect to
-   * round history — never re-derives the list by scanning past rounds.
+   * (never later), since it reads `this.submissions` for THIS round's
+   * authors before the next round's `enterWriting()` can clear it. Read-only
+   * with respect to round history — never re-derives the list by scanning
+   * past rounds.
    */
   private updateBestOfNight(): void {
     this.rotation.forEach((authorId, index) => {
@@ -658,8 +680,7 @@ export class Room {
       this.bestOfNight.push({
         authorId,
         authorName: this.players.get(authorId)?.name ?? "",
-        caption: this.submissions.get(authorId) ?? "",
-        photoUrl: this.photoUrlFor(authorId),
+        meme: this.submissions.get(authorId) ?? "",
         score,
       });
     });
@@ -849,7 +870,7 @@ export class Room {
       return {
         authorId,
         authorName: author?.name ?? "",
-        caption: this.submissions.get(authorId) ?? "",
+        meme: this.submissions.get(authorId) ?? "",
         ratings: values,
         eligibleAtClose: this.eligibleAtClose.get(index) ?? 0,
         score: values.reduce((sum, value) => sum + value, 0),
@@ -926,11 +947,12 @@ export class Room {
       : null;
     const you = this.players.get(playerId);
 
-    // `ratingStep` carries the CURRENT step's caption only — never any other
-    // step's — and no author identity for anyone but the author themself
-    // (`youAreAuthor` is the only identity signal exposed). `null` in every
-    // phase but RATING, including REVEAL_BREAK, so no caption rides along
-    // during a break either (D-14's discipline extended to the reveal side).
+    // `ratingStep` carries the CURRENT step's composited meme only — never
+    // any other step's — and no author identity for anyone but the author
+    // themself (`youAreAuthor` is the only identity signal exposed). `null`
+    // in every phase but RATING, including REVEAL_BREAK, so no meme rides
+    // along during a break either (D-14's discipline extended to the reveal
+    // side).
     let ratingStep: RatingStepView | null = null;
     if (this.phase === "RATING") {
       const authorId = this.rotation[this.stepIndex];
@@ -941,8 +963,7 @@ export class Room {
       ratingStep = {
         index: this.stepIndex,
         total: this.rotation.length,
-        caption: this.submissions.get(authorId) ?? "",
-        photoUrl: this.photoUrlFor(authorId),
+        meme: this.submissions.get(authorId) ?? "",
         youAreAuthor: playerId === authorId,
         youMayRate: eligible.includes(playerId) && !youHaveRated,
         youHaveRated,
