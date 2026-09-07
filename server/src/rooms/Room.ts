@@ -79,6 +79,12 @@ export type SwapPhotoOutcome =
   | { ok: true; photoUrl: string }
   | { ok: false; error: "WRONG_PHASE" | "ALREADY_SUBMITTED" | "SWAP_ALREADY_USED" };
 
+/** Result of a skip-round attempt — never throws, always tells the caller
+ * why. Shaped exactly like the other outcome types (Phase 6, LIVE-04). */
+export type SkipRoundOutcome =
+  | { ok: true }
+  | { ok: false; error: "NOT_HOST" | "WRONG_PHASE" };
+
 // Standard, correctly-padded base64 — exactly what canvas.toBlob() ->
 // FileReader.readAsDataURL() -> stripping the "data:image/png;base64,"
 // prefix always produces (T-05-02).
@@ -151,6 +157,11 @@ export class Room {
   /** ROUND-06/D-02 — the playerIds who have already used this round's one
    * swap. Cleared every `enterWriting()`, exactly like `submissions`. */
   swapUsed = new Set<string>();
+  /** Phase 6, LIVE-04/D-01 — true only during the ROUND_END window a
+   * host-initiated skip produced; read once by `buildRoundEndView` and reset
+   * to `false` both defensively in `enterWriting()` and by the round-end
+   * continuation closure in `finishRound()`. */
+  roundEndSkippedByHost = false;
 
   /**
    * Invoked whenever a delayed internal timer (a roster fade, and later a
@@ -527,6 +538,7 @@ export class Room {
     this.ratings.clear();
     this.eligibleAtClose.clear();
     this.swapUsed.clear();
+    this.roundEndSkippedByHost = false;
     this.photoAssignments = this.drawPhotosForRound([...this.players.keys()]);
     this.schedulePhase(Date.now() + this.settings.writingSeconds * 1000, () =>
       this.closeWriting(),
@@ -825,12 +837,28 @@ export class Room {
    * phase or, after the last round, game end. Computed entirely from the
    * room's own state (`roundIndex`, `settings.rounds`) — no client input
    * names the next phase, matching `transferHost()`'s no-arguments rule.
+   *
+   * `discarded` (Phase 6, LIVE-04/D-01) — when `true` (a host-initiated
+   * skip), the round's not-yet-applied score is simply never computed:
+   * `applyRoundScores`/`updateBestOfNight` are skipped entirely rather than
+   * called with a partial value, and any already-cast-but-unclosed rating
+   * bookkeeping is cleared so it can never later be mistaken for a real
+   * round. When `false`, behaves exactly as the original `enterRoundEnd()`
+   * always did.
    */
-  private enterRoundEnd(): void {
-    this.applyRoundScores();
-    this.updateBestOfNight();
+  private finishRound(discarded: boolean): void {
+    if (discarded) {
+      this.rotation = [];
+      this.ratings.clear();
+      this.eligibleAtClose.clear();
+    } else {
+      this.applyRoundScores();
+      this.updateBestOfNight();
+    }
+    this.roundEndSkippedByHost = discarded;
     this.phase = "ROUND_END";
     this.schedulePhase(Date.now() + BETWEEN_PHASES_MS, () => {
+      this.roundEndSkippedByHost = false;
       if (this.roundIndex < this.settings.rounds) {
         this.roundIndex++;
         this.enterWriting();
@@ -838,6 +866,37 @@ export class Room {
         this.enterGameEnd();
       }
     });
+  }
+
+  /** Thin wrapper preserving the original name/call sites (`closeRatingStep`,
+   * `closeWriting`'s D-09 skip branch) — a round that finished normally. */
+  private enterRoundEnd(): void {
+    this.finishRound(false);
+  }
+
+  /**
+   * `skipRound` — host-only "break-glass" recovery action (LIVE-04):
+   * discards the current round entirely — no score from it, regardless of
+   * how many captions or
+   * ratings had already come in — and moves straight to ROUND_END exactly as
+   * a normally-finished round would, then on to the next round or GAME_END
+   * on the usual schedule. Refused with `NOT_HOST` first (identity before
+   * anything else, matching `changeSetting`/`startGame`'s own order), then
+   * `WRONG_PHASE` for any phase outside the three live in-round phases —
+   * this also refuses a round that has already reached ROUND_END or GAME_END
+   * on its own (a race between the round's own timer and the host's tap),
+   * so a discarded round can never be double-applied.
+   */
+  skipRound(playerId: string): SkipRoundOutcome {
+    if (playerId !== this.hostId) {
+      return { ok: false, error: "NOT_HOST" };
+    }
+    if (this.phase !== "WRITING" && this.phase !== "REVEAL_BREAK" && this.phase !== "RATING") {
+      return { ok: false, error: "WRONG_PHASE" };
+    }
+
+    this.finishRound(true);
+    return { ok: true };
   }
 
   /** Terminal: no timer, nothing further scheduled, no deadline. */
@@ -876,7 +935,7 @@ export class Room {
         score: values.reduce((sum, value) => sum + value, 0),
       };
     });
-    return { entries };
+    return { entries, skippedByHost: this.roundEndSkippedByHost };
   }
 
   /**

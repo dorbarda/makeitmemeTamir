@@ -267,6 +267,30 @@ export function registerHandlers(io: Server, socket: Socket, deps: HandlerDeps):
     room.broadcast(io);
   });
 
+  socket.on(CLIENT_EVENTS.skipRound, () => {
+    if (!data.playerId || !data.roomCode) {
+      emitError(socket, { code: "NOT_IN_ROOM", messageHe: HEBREW_ERRORS.NOT_IN_ROOM });
+      return;
+    }
+
+    const room = roomManager.findRoom(data.roomCode);
+    if (!room) {
+      emitError(socket, { code: "ROOM_NOT_FOUND", messageHe: HEBREW_ERRORS.ROOM_NOT_FOUND });
+      return;
+    }
+
+    // No payload to destructure — the acting host is always
+    // socket.data.playerId (Phase 6, LIVE-04), matching every other
+    // mutating handler's identity rule.
+    const result = room.skipRound(data.playerId);
+    if (!result.ok) {
+      emitError(socket, { code: result.error, messageHe: HEBREW_ERRORS[result.error] });
+      return;
+    }
+
+    room.broadcast(io);
+  });
+
   socket.on(CLIENT_EVENTS.rejoin, () => {
     if (!data.playerId || !data.roomCode) {
       // No known binding for this socket's token (missing, expired, or a

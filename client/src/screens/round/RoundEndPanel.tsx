@@ -28,7 +28,7 @@ export function RoundEndPanel({ snapshot }: RoundEndPanelProps) {
   return (
     <section className="round-end-panel">
       {rankedEntries.length === 0 ? (
-        <p>{HEBREW_UI.roundEndTooFewCaptions}</p>
+        <p>{roundEnd.skippedByHost ? HEBREW_UI.roundSkippedByHost : HEBREW_UI.roundEndTooFewCaptions}</p>
       ) : (
         <ul>
           {rankedEntries.map((entry) => (

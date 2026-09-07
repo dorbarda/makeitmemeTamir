@@ -79,6 +79,8 @@ export const HEBREW_UI = {
   // plan 02-05 — round-end / game-end (D-09's skip line; ranking is
   // explicitly Phase 4, see RoundEndPanel.tsx)
   roundEndTooFewCaptions: "לא הגיעו מספיק כיתובים כדי לדרג בסיבוב הזה",
+  // plan 06-01 — host-skipped round message (LIVE-04, D-01)
+  roundSkippedByHost: "המנחה ביטל את הסיבוב הזה",
   // plan 03-01 — real content: photos, tier names, scoreboard
   ratingTierFunniest: "דנה מגנזי",
   ratingTierFine: "תמיר פטריות",

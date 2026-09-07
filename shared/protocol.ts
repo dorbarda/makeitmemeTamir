@@ -75,7 +75,15 @@ export type RoundEndEntry = {
   score: number;
 };
 
-export type RoundEndView = { entries: RoundEndEntry[] };
+export type RoundEndView = {
+  entries: RoundEndEntry[];
+  // LIVE-04/D-01 — true only for the one ROUND_END window immediately
+  // following a host skip-round; cleared before the next round opens (or at
+  // GAME_END, whichever comes first). A host-skipped round's entries are
+  // always empty, but this flag is what lets the client show "the host
+  // skipped this round" instead of the unrelated too-few-captions message.
+  skippedByHost: boolean;
+};
 
 /**
  * One meme in the "best of the night" list (MEME-02/D-04). Carries
@@ -162,6 +170,7 @@ export const CLIENT_EVENTS = {
   submitCaption: "submit-caption", // { meme: string } — base64-encoded PNG (Phase 5, replaces { text: string })
   submitRating: "submit-rating", // { stepIndex: number, value: RatingValue }  (added in plan 02-01; wired in 02-04)
   swapPhoto: "swap-photo", // {}  — host-blind, no payload; ROUND-06 (added in plan 04-01)
+  skipRound: "skip-round", // {}  — host-only, no payload (Phase 6, LIVE-04)
 } as const;
 
 export const SERVER_EVENTS = {
