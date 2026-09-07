@@ -131,7 +131,9 @@ describe("photo swap end to end — instant, one-time, locks on submit, and real
       host.emit(CLIENT_EVENTS.swapPhoto, {});
       const hostAfterSwap = await hostOnSwap;
       expect(hostAfterSwap.yourPhotoUrl).toMatch(/^\/tamir-photos\//);
-      expect(PHOTO_FILENAMES).toContain(hostAfterSwap.yourPhotoUrl!.replace("/tamir-photos/", ""));
+      expect(PHOTO_FILENAMES).toContain(
+        decodeURIComponent(hostAfterSwap.yourPhotoUrl!.replace("/tamir-photos/", "")),
+      );
       expect(hostAfterSwap.yourPhotoUrl).not.toBe(preSwapPhotoUrl);
       expect(hostAfterSwap.youCanSwapPhoto).toBe(false);
 
