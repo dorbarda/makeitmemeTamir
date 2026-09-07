@@ -9,6 +9,7 @@ import {
   WRITING_COLLAPSE_MS,
 } from "../src/config.js";
 import type { RoomPhase } from "@shared/protocol.js";
+import { fakeMeme } from "./fixtures/meme.js";
 
 /**
  * LIVE-03, the phase's own reason for existing: every non-terminal phase
@@ -57,8 +58,8 @@ describe("LIVE-03 — no phase can be held open by a player who left, disconnect
    */
   function reachRatingStep0(count: number) {
     const players = startWithPlayers(count);
-    room.submitCaption(players[0].id, "caption 0");
-    room.submitCaption(players[1].id, "caption 1");
+    room.submitCaption(players[0].id, fakeMeme("p0"));
+    room.submitCaption(players[1].id, fakeMeme("p1"));
 
     vi.advanceTimersByTime(room.settings.writingSeconds * 1000);
     expect(room.phase).toBe("REVEAL_BREAK");
@@ -83,12 +84,12 @@ describe("LIVE-03 — no phase can be held open by a player who left, disconnect
     const players = startWithPlayers(4);
     room.detach(players[3].id); // departs before ever submitting
 
-    room.submitCaption(players[0].id, "a");
-    room.submitCaption(players[1].id, "b");
+    room.submitCaption(players[0].id, fakeMeme("a"));
+    room.submitCaption(players[1].id, fakeMeme("b"));
     expect(room.phase).toBe("WRITING"); // players[2] (connected) hasn't submitted yet
 
     const now = Date.now();
-    room.submitCaption(players[2].id, "c");
+    room.submitCaption(players[2].id, fakeMeme("c"));
     // Every CONNECTED player (0,1,2) has now submitted — players[3] having
     // left is never counted among those the room is waiting on.
     expect(room.deadlineAt).toBe(now + WRITING_COLLAPSE_MS);
@@ -196,7 +197,11 @@ describe("LIVE-03 — no phase can be held open by a player who left, disconnect
     vi.advanceTimersByTime(3_600_000);
     expect(room.phase).toBe("GAME_END");
     expect(seenPhases).not.toContain("RATING");
-    expect(room.snapshotFor(players[0].id).roundEnd?.entries).toEqual([]);
+    // `roundEnd` is now ROUND_END-only (plan 04-02) — at GAME_END the
+    // equivalent "nothing was ever rated" proof is bestOfNight staying
+    // exactly empty (MEME-02/D-04), never padded or fabricated.
+    expect(room.snapshotFor(players[0].id).roundEnd).toBeNull();
+    expect(room.snapshotFor(players[0].id).gameEnd?.bestOfNight).toEqual([]);
   });
 
   it("a RoundEndEntry for a step rated by two of four eligible raters has a ratings array of length 2 and eligibleAtClose equal to 4", () => {
@@ -229,8 +234,8 @@ describe("LIVE-03 — no phase can be held open by a player who left, disconnect
     // Two submissions clear MIN_SUBMISSIONS_TO_RATE, giving the round two
     // rating steps to walk through (so REVEAL_BREAK and RATING are each
     // visited twice — once per meme).
-    room.submitCaption(players[0].id, "a");
-    room.submitCaption(players[1].id, "b");
+    room.submitCaption(players[0].id, fakeMeme("a"));
+    room.submitCaption(players[1].id, fakeMeme("b"));
 
     const PHASE_ADVANCE_MS: Record<"WRITING" | "REVEAL_BREAK" | "RATING" | "ROUND_END", () => number> = {
       WRITING: () => room.settings.writingSeconds * 1000,
@@ -263,8 +268,8 @@ describe("LIVE-03 — no phase can be held open by a player who left, disconnect
       const r = new Room(`code-${targetPhase}`, "http://x/join/x", "data:image/png;base64,");
       const ps = Array.from({ length: 4 }, (_, i) => r.addPlayer(`P${i}`, `t-${targetPhase}-${i}`));
       r.startGame(ps[0].id);
-      r.submitCaption(ps[0].id, "a");
-      r.submitCaption(ps[1].id, "b");
+      r.submitCaption(ps[0].id, fakeMeme("a"));
+      r.submitCaption(ps[1].id, fakeMeme("b"));
 
       if (targetPhase !== "WRITING") {
         vi.advanceTimersByTime(r.settings.writingSeconds * 1000); // -> REVEAL_BREAK (step 0)

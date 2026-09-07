@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import type { Server } from "socket.io";
 import {
   SERVER_EVENTS,
+  type BestOfEntry,
+  type GameEndView,
   type GameSettings,
   type LobbySnapshot,
   type PlayerView,
@@ -17,6 +19,7 @@ import {
   BETWEEN_MEMES_MS,
   BETWEEN_PHASES_MS,
   HOST_TRANSFER_GRACE_MS,
+  MEME_MAX_BASE64_CHARS,
   MIN_PLAYERS_TO_START,
   MIN_SUBMISSIONS_TO_RATE,
   RATING_COLLAPSE_MS,
@@ -28,6 +31,7 @@ import {
   WRITING_SECONDS_PRESETS,
 } from "../config.js";
 import { defaultSettings, isPresetValue } from "./gameSettings.js";
+import { PHOTO_FILENAMES, assignPhotosFromEligiblePools, drawOnePhoto, photoUrl } from "./photos.js";
 import { buildRotation, eligibleRaters } from "./rotation.js";
 import { normalizeForCompare } from "../names/nameValidation.js";
 import type { Player } from "../players/Player.js";
@@ -52,7 +56,10 @@ export type ChangeSettingOutcome =
  * caller why. Shaped exactly like RenameOutcome/StartGameOutcome. */
 export type SubmitCaptionOutcome =
   | { ok: true }
-  | { ok: false; error: "WRONG_PHASE" | "CAPTION_REQUIRED" | "ALREADY_SUBMITTED" };
+  | {
+      ok: false;
+      error: "WRONG_PHASE" | "CAPTION_REQUIRED" | "MEME_TOO_LARGE" | "ALREADY_SUBMITTED";
+    };
 
 /** Result of a submit-rating attempt — never throws, always tells the
  * caller why. Shaped exactly like RenameOutcome/StartGameOutcome/
@@ -65,6 +72,17 @@ export type SubmitRatingOutcome =
       ok: false;
       error: "WRONG_PHASE" | "CANNOT_RATE_OWN" | "ALREADY_RATED" | "RATING_OUT_OF_RANGE";
     };
+
+/** Result of a swap-photo attempt — never throws, always tells the caller
+ * why. Shaped exactly like the other outcome types (ROUND-06, D-01, D-02). */
+export type SwapPhotoOutcome =
+  | { ok: true; photoUrl: string }
+  | { ok: false; error: "WRONG_PHASE" | "ALREADY_SUBMITTED" | "SWAP_ALREADY_USED" };
+
+// Standard, correctly-padded base64 — exactly what canvas.toBlob() ->
+// FileReader.readAsDataURL() -> stripping the "data:image/png;base64,"
+// prefix always produces (T-05-02).
+const BASE64_PATTERN = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
 
 export class Room {
   readonly code: string;
@@ -114,6 +132,25 @@ export class Room {
    * step closed. Recorded so Phase 4 can choose between a sum and an average
    * without a rework (D-10's flag). */
   eligibleAtClose = new Map<number, number>();
+  /** playerId -> this round's assigned photo filename (D-01). Rebuilt every
+   * `enterWriting()` via `assignPhotos`; a player who joins after that has
+   * already run gets a lazy fallback draw via `photoUrlFor`. */
+  photoAssignments = new Map<string, string>();
+  /** MEME-02/D-04 — the running top-3 highest-scoring memes across the whole
+   * game so far, always length <= 3, always sorted highest-score-first.
+   * Never cleared between rounds, never recomputed from round history —
+   * `updateBestOfNight()` is the sole mutation site, called only from
+   * `enterRoundEnd()`. */
+  bestOfNight: BestOfEntry[] = [];
+  /** ROUND-02 — every photo filename a player has ever been shown this game,
+   * across every round. Never cleared at `enterWriting()`; only a single
+   * player's own set is cleared (via `eligiblePoolFor`) once they have seen
+   * every photo currently in the pool, per CONTEXT.md's graceful-reset
+   * discretion. */
+  photosSeenByPlayer = new Map<string, Set<string>>();
+  /** ROUND-06/D-02 — the playerIds who have already used this round's one
+   * swap. Cleared every `enterWriting()`, exactly like `submissions`. */
+  swapUsed = new Set<string>();
 
   /**
    * Invoked whenever a delayed internal timer (a roster fade, and later a
@@ -389,27 +426,40 @@ export class Room {
   }
 
   /**
-   * Records a player's caption for the current round (ROUND-04/ROUND-05).
-   * `text` must already be sanitized and truncated by the caller — this only
-   * enforces the round-engine rules: refused with `WRONG_PHASE` outside
-   * WRITING, `CAPTION_REQUIRED` for an empty prepared string, and
-   * `ALREADY_SUBMITTED` for a second attempt from the same player in the
-   * same round (T-02-14 — no replay can overwrite a stored caption or
-   * double-count progress). On success, checks whether every connected
-   * player has now submitted and collapses the deadline if so (D-07).
+   * Records a player's composited meme for the current round (ROUND-04/
+   * ROUND-05, RESEARCH.md's rasterize-and-transmit decision, D-01). `meme` is
+   * opaque, client-submitted, rasterized image data (a base64-encoded PNG) —
+   * this method itself validates it, matching `submitRating`'s own
+   * unknown-payload signature, since a meme is not text this method can
+   * usefully sanitize: refused with `WRONG_PHASE` outside WRITING,
+   * `CAPTION_REQUIRED` for a non-string/empty payload or one that isn't
+   * validly base64-shaped, `MEME_TOO_LARGE` for a payload over
+   * `MEME_MAX_BASE64_CHARS` (T-05-01), and `ALREADY_SUBMITTED` for a second
+   * attempt from the same player in the same round (T-02-14 — no replay can
+   * overwrite a stored meme or double-count progress). The server never
+   * verifies the PNG itself is well-formed — a malformed image just renders
+   * as a broken `<img>` client-side, an acceptable trade-off for speed
+   * (RESEARCH.md). On success, checks whether every connected player has now
+   * submitted and collapses the deadline if so (D-07).
    */
-  submitCaption(playerId: string, text: string): SubmitCaptionOutcome {
+  submitCaption(playerId: string, meme: unknown): SubmitCaptionOutcome {
     if (this.phase !== "WRITING") {
       return { ok: false, error: "WRONG_PHASE" };
     }
-    if (text.length === 0) {
+    if (typeof meme !== "string" || meme.length === 0) {
+      return { ok: false, error: "CAPTION_REQUIRED" };
+    }
+    if (meme.length > MEME_MAX_BASE64_CHARS) {
+      return { ok: false, error: "MEME_TOO_LARGE" };
+    }
+    if (!BASE64_PATTERN.test(meme)) {
       return { ok: false, error: "CAPTION_REQUIRED" };
     }
     if (this.submissions.has(playerId)) {
       return { ok: false, error: "ALREADY_SUBMITTED" };
     }
 
-    this.submissions.set(playerId, text);
+    this.submissions.set(playerId, meme);
     this.maybeCollapseWriting();
     return { ok: true };
   }
@@ -476,9 +526,168 @@ export class Room {
     this.stepIndex = -1;
     this.ratings.clear();
     this.eligibleAtClose.clear();
+    this.swapUsed.clear();
+    this.photoAssignments = this.drawPhotosForRound([...this.players.keys()]);
     this.schedulePhase(Date.now() + this.settings.writingSeconds * 1000, () =>
       this.closeWriting(),
     );
+  }
+
+  /**
+   * ROUND-02 — `playerId`'s currently-eligible photo pool: `pool` filtered
+   * down to filenames they have not yet seen this game. If they have no
+   * seen-set yet, or `pool` filtered against it comes back empty (they have
+   * now seen every photo currently in `pool`), resets their seen-set
+   * (CONTEXT.md's Claude's Discretion: graceful degradation over crashing or
+   * stalling once the pool is exhausted) and returns `pool` unchanged.
+   */
+  private eligiblePoolFor(playerId: string, pool: string[] = PHOTO_FILENAMES): string[] {
+    const seen = this.photosSeenByPlayer.get(playerId);
+    if (!seen || seen.size === 0) return pool;
+
+    const eligible = pool.filter((filename) => !seen.has(filename));
+    if (eligible.length === 0) {
+      seen.clear();
+      return pool;
+    }
+    return eligible;
+  }
+
+  /** Records that `playerId` has now been shown `filename` this game
+   * (ROUND-02). Gets or creates that player's own seen-set. */
+  private markPhotoSeen(playerId: string, filename: string): void {
+    let seen = this.photosSeenByPlayer.get(playerId);
+    if (!seen) {
+      seen = new Set<string>();
+      this.photosSeenByPlayer.set(playerId, seen);
+    }
+    seen.add(filename);
+  }
+
+  /**
+   * ROUND-02's per-player draw for a round (or a lazy late-joiner draw):
+   * builds each player's own eligible pool, draws one photo per player via
+   * `assignPhotosFromEligiblePools`, then records every resulting photo as
+   * seen before returning the assignment map.
+   */
+  private drawPhotosForRound(playerIds: string[]): Map<string, string> {
+    const eligiblePools = new Map<string, string[]>();
+    for (const playerId of playerIds) {
+      eligiblePools.set(playerId, this.eligiblePoolFor(playerId));
+    }
+    const assignments = assignPhotosFromEligiblePools(eligiblePools);
+    for (const [playerId, filename] of assignments) {
+      this.markPhotoSeen(playerId, filename);
+    }
+    return assignments;
+  }
+
+  /**
+   * D-01 — this round's photo for `playerId`, drawn from `photoAssignments`.
+   * A player who joins after this round's `enterWriting()` already ran has
+   * no entry there (nothing today prevents a mid-round join); this lazily
+   * draws one (honoring the same ROUND-02 seen-photo tracking as a normal
+   * round draw), caches it, and returns it either way, so `snapshotFor`
+   * never has to render an empty `<img src>` for anyone currently in WRITING
+   * or RATING.
+   */
+  private photoUrlFor(playerId: string): string {
+    let filename = this.photoAssignments.get(playerId);
+    if (!filename) {
+      filename = this.drawPhotosForRound([playerId]).get(playerId)!;
+      this.photoAssignments.set(playerId, filename);
+    }
+    return photoUrl(filename);
+  }
+
+  /**
+   * Swaps `playerId`'s currently assigned photo for a new one, instantly and
+   * with no preview (D-01). Refused with `WRONG_PHASE` outside WRITING,
+   * `ALREADY_SUBMITTED` once this player's caption has locked in this
+   * round's photo (D-02), and `SWAP_ALREADY_USED` on a second attempt in the
+   * same round. Draws from the player's own eligible (not-yet-seen) pool,
+   * excluding their current photo so a swap is never a no-op — falling back
+   * to the full eligible pool if the current photo was their only eligible
+   * option.
+   */
+  swapPhoto(playerId: string): SwapPhotoOutcome {
+    if (this.phase !== "WRITING") {
+      return { ok: false, error: "WRONG_PHASE" };
+    }
+    if (this.submissions.has(playerId)) {
+      return { ok: false, error: "ALREADY_SUBMITTED" };
+    }
+    if (this.swapUsed.has(playerId)) {
+      return { ok: false, error: "SWAP_ALREADY_USED" };
+    }
+
+    const currentFilename = this.photoAssignments.get(playerId);
+    const eligible = this.eligiblePoolFor(playerId);
+    const withoutCurrent = eligible.filter((filename) => filename !== currentFilename);
+    const pool = withoutCurrent.length > 0 ? withoutCurrent : eligible;
+    const filename = drawOnePhoto(pool);
+
+    this.photoAssignments.set(playerId, filename);
+    this.markPhotoSeen(playerId, filename);
+    this.swapUsed.add(playerId);
+    return { ok: true, photoUrl: photoUrl(filename) };
+  }
+
+  /**
+   * SCORE-01 — the only place `Player.score` is ever mutated. Iterates
+   * `this.rotation` by index, sums each step's raw rating values, and adds
+   * the total onto that step's author. Called as the very first line of
+   * `enterRoundEnd()`, before `phase` changes to `ROUND_END`. A round skipped
+   * for too few captions (D-09) has an empty `rotation`, so this is a no-op
+   * for that round — no score is invented. No socket handler in
+   * `server/src/socket/handlers.ts` ever assigns to `.score`, so no client
+   * message can influence it.
+   */
+  private applyRoundScores(): void {
+    this.rotation.forEach((authorId, index) => {
+      const stepRatings = this.ratings.get(index);
+      if (!stepRatings) return;
+      const total = [...stepRatings.values()].reduce((sum, value) => sum + value, 0);
+      const author = this.players.get(authorId);
+      if (author) {
+        author.score += total;
+      }
+    });
+  }
+
+  /**
+   * MEME-02/D-04 — updates the running "best of the night" list from this
+   * round that just closed. Walks `this.rotation` the same way
+   * `applyRoundScores` does: a step with no entry in `this.ratings` (nobody
+   * rated it) contributes nothing. For every rated step, pushes one entry
+   * carrying everything the client needs to render it (the composited meme,
+   * author, score), then re-sorts the whole list highest-score-first and
+   * trims it to length 3. `Array.prototype.sort`'s stability means a later
+   * round's meme with a score EQUAL to an already-surviving entry's score
+   * never displaces it — the earlier-inserted survivor keeps the #3 slot,
+   * matching D-03's own no-tiebreaker philosophy applied to this list's
+   * eviction boundary. Must only ever be called from `enterRoundEnd()`
+   * (never later), since it reads `this.submissions` for THIS round's
+   * authors before the next round's `enterWriting()` can clear it. Read-only
+   * with respect to round history — never re-derives the list by scanning
+   * past rounds.
+   */
+  private updateBestOfNight(): void {
+    this.rotation.forEach((authorId, index) => {
+      const stepRatings = this.ratings.get(index);
+      if (!stepRatings) return;
+      const score = [...stepRatings.values()].reduce((sum, value) => sum + value, 0);
+      this.bestOfNight.push({
+        authorId,
+        authorName: this.players.get(authorId)?.name ?? "",
+        meme: this.submissions.get(authorId) ?? "",
+        score,
+      });
+    });
+    this.bestOfNight.sort((a, b) => b.score - a.score);
+    if (this.bestOfNight.length > 3) {
+      this.bestOfNight.length = 3;
+    }
   }
 
   /**
@@ -618,6 +827,8 @@ export class Room {
    * names the next phase, matching `transferHost()`'s no-arguments rule.
    */
   private enterRoundEnd(): void {
+    this.applyRoundScores();
+    this.updateBestOfNight();
     this.phase = "ROUND_END";
     this.schedulePhase(Date.now() + BETWEEN_PHASES_MS, () => {
       if (this.roundIndex < this.settings.rounds) {
@@ -641,28 +852,53 @@ export class Room {
    * empty edge, D-10). For each step in `rotation`, in the same order the
    * memes were shown, carries the author's id and current name, the
    * caption, the raw rating values that step received (never a default for
-   * a silent rater), and the eligible-rater count recorded at the moment
-   * that step closed. Deliberately does NOT reduce `ratings` to a score:
-   * D-10 flagged that a meme rated while some eligible raters were away
-   * would score lower purely by bad luck of timing, and whether the answer
-   * is a sum, an average or a floor is a Phase 4 scoring decision this
-   * engine must not pre-empt — it only guarantees both numbers are exposed.
-   * A round that skipped rating (D-09) yields an empty `entries` array,
-   * never null and never a fabricated entry.
+   * a silent rater), the eligible-rater count recorded at the moment that
+   * step closed, and — as of VOTE-06 (plan 04-01) — that meme's real total
+   * score: a plain sum of `ratings`, computed once here so no other file
+   * ever re-derives a meme's score from its raw ratings array. D-10 flagged
+   * that a meme rated while some eligible raters were away would score lower
+   * purely by bad luck of timing; VOTE-06 accepted that tradeoff (a sum,
+   * highest first) rather than an average or a floor. A round that skipped
+   * rating (D-09) yields an empty `entries` array, never null and never a
+   * fabricated entry.
    */
   private buildRoundEndView(): RoundEndView {
     const entries: RoundEndEntry[] = this.rotation.map((authorId, index) => {
       const author = this.players.get(authorId);
       const stepRatings = this.ratings.get(index);
+      const values = stepRatings ? [...stepRatings.values()] : [];
       return {
         authorId,
         authorName: author?.name ?? "",
-        caption: this.submissions.get(authorId) ?? "",
-        ratings: stepRatings ? [...stepRatings.values()] : [],
+        meme: this.submissions.get(authorId) ?? "",
+        ratings: values,
         eligibleAtClose: this.eligibleAtClose.get(index) ?? 0,
+        score: values.reduce((sum, value) => sum + value, 0),
       };
     });
     return { entries };
+  }
+
+  /**
+   * Builds the GAME_END-only view (SCORE-04/D-03, MEME-02/D-04). Computed
+   * fresh every call, never cached. `winners` is every player whose score
+   * equals the room's own max score — never just one on a tie, and never a
+   * tiebreaker of any kind. `bestOfNight` is only READ here, never
+   * recomputed — `updateBestOfNight()` already maintains it incrementally.
+   */
+  private buildGameEndView(): GameEndView {
+    const players = [...this.players.values()];
+    const maxScore = players.reduce((max, p) => Math.max(max, p.score), 0);
+    const winners: PlayerView[] = players
+      .filter((p) => p.score === maxScore)
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        connected: p.connected,
+        isHost: p.id === this.hostId,
+        score: p.score,
+      }));
+    return { winners, bestOfNight: this.bestOfNight };
   }
 
   /**
@@ -711,15 +947,15 @@ export class Room {
       : null;
     const you = this.players.get(playerId);
 
-    // `ratingStep` carries the CURRENT step's caption only — never any other
-    // step's — and no author identity for anyone but the author themself
-    // (`youAreAuthor` is the only identity signal exposed). `null` in every
-    // phase but RATING, including REVEAL_BREAK, so no caption rides along
-    // during a break either (D-14's discipline extended to the reveal side).
+    // `ratingStep` carries the CURRENT step's composited meme only — never
+    // any other step's — and no author identity for anyone but the author
+    // themself (`youAreAuthor` is the only identity signal exposed). `null`
+    // in every phase but RATING, including REVEAL_BREAK, so no meme rides
+    // along during a break either (D-14's discipline extended to the reveal
+    // side).
     let ratingStep: RatingStepView | null = null;
     if (this.phase === "RATING") {
       const authorId = this.rotation[this.stepIndex];
-      const author = this.players.get(authorId);
       const stepRatings = this.ratings.get(this.stepIndex);
       const eligible = eligibleRaters(this.players, authorId);
       const youHaveRated = stepRatings?.has(playerId) ?? false;
@@ -727,8 +963,7 @@ export class Room {
       ratingStep = {
         index: this.stepIndex,
         total: this.rotation.length,
-        caption: this.submissions.get(authorId) ?? "",
-        placeholderId: author ? author.joinedAt + 1 : 0,
+        meme: this.submissions.get(authorId) ?? "",
         youAreAuthor: playerId === authorId,
         youMayRate: eligible.includes(playerId) && !youHaveRated,
         youHaveRated,
@@ -757,15 +992,23 @@ export class Room {
       round: this.phase === "LOBBY" ? null : { index: this.roundIndex, total: this.settings.rounds },
       progress,
       youSubmitted: inWriting && this.submissions.has(playerId),
-      // A trivial numbered placeholder, not a real photo — Phase 3 replaces
-      // this with the player's actual assigned image.
-      yourPlaceholderId: inWriting && you ? you.joinedAt + 1 : null,
+      // D-01 — this player's own assigned photo for the round, never a
+      // placeholder.
+      yourPhotoUrl: inWriting && you ? this.photoUrlFor(playerId) : null,
+      // ROUND-06/D-02 — true only during WRITING, before this player has
+      // submitted or already used this round's one swap.
+      youCanSwapPhoto:
+        inWriting && !this.submissions.has(playerId) && !this.swapUsed.has(playerId),
       ratingStep,
-      // T-02-20 — populated only for ROUND_END and GAME_END, so the full
-      // caption/rating set for the round never travels early (D-14's
-      // discipline extended to the round-end reveal).
-      roundEnd:
-        this.phase === "ROUND_END" || this.phase === "GAME_END" ? this.buildRoundEndView() : null,
+      // T-02-20 — `roundEnd` is now ROUND_END-only (plan 04-02 split it from
+      // GAME_END, which gets its own dedicated `gameEnd` view below); the
+      // full caption/rating set for the round still never travels early
+      // (D-14's discipline extended to the round-end reveal).
+      roundEnd: this.phase === "ROUND_END" ? this.buildRoundEndView() : null,
+      // plan 04-02 — GAME_END's own dedicated view: every tied top scorer
+      // (SCORE-04/D-03) and the real top-3 best-of-the-night memes
+      // (MEME-02/D-04).
+      gameEnd: this.phase === "GAME_END" ? this.buildGameEndView() : null,
     };
   }
 

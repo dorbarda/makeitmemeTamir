@@ -19,10 +19,12 @@ export const HEBREW_ERRORS: Record<ErrorCode, string> = {
   NOT_ENOUGH_PLAYERS: "צריך לפחות 3 שחקנים כדי להתחיל",
   WRONG_PHASE: "אי אפשר לעשות את זה עכשיו",
   CAPTION_REQUIRED: "צריך לכתוב כיתוב כדי לשלוח",
+  MEME_TOO_LARGE: "התמונה גדולה מדי — נסו לצמצם את הכיתובים",
   ALREADY_SUBMITTED: "כבר שלחת כיתוב לסיבוב הזה",
   ALREADY_RATED: "כבר דירגת את התמונה הזו",
   CANNOT_RATE_OWN: "אי אפשר לדרג את התמונה של עצמך",
   RATING_OUT_OF_RANGE: "הדירוג חייב להיות בין 1 ל-3",
+  SWAP_ALREADY_USED: "כבר החלפת תמונה בסיבוב הזה",
 };
 
 export const HEBREW_UI = {
@@ -74,13 +76,20 @@ export const HEBREW_UI = {
   // plan 02-04 — per-meme rating step
   yourMemeWaiting: "התמונה שלך מחכה לתורה",
   ratedAlreadyNote: "כבר דירגת את התמונה הזו",
-  placeholderContentPrefix: "תוכן זמני",
-  // The digits stand in for the funny Hebrew tier names — that naming
-  // decision is deliberately deferred to Phase 3/4 (see STATE.md).
-  ratingTierPlaceholder1: "1",
-  ratingTierPlaceholder2: "2",
-  ratingTierPlaceholder3: "3",
-  // plan 02-05 — round-end / game-end (D-09's skip line; ranking and
-  // scoring are explicitly Phase 4, see RoundEndPanel.tsx)
+  // plan 02-05 — round-end / game-end (D-09's skip line; ranking is
+  // explicitly Phase 4, see RoundEndPanel.tsx)
   roundEndTooFewCaptions: "לא הגיעו מספיק כיתובים כדי לדרג בסיבוב הזה",
+  // plan 03-01 — real content: photos, tier names, scoreboard
+  ratingTierFunniest: "דנה מגנזי",
+  ratingTierFine: "תמיר פטריות",
+  ratingTierMeh: "תמיר בפאניקה",
+  photoAlt: "תמונה של תמיר",
+  scoreboardHeading: "טבלת הניקוד",
+  // plan 04-01 — photo swap button and real ranked round-results score
+  swapPhotoButton: "החלפת תמונה",
+  roundResultsPointsSuffix: "נקודות",
+  // plan 04-02 — game-end winner banner and best-of-the-night list
+  winnerHeading: "המנצחים",
+  bestOfNightHeading: "המצחיקים של הערב",
+  bestOfNightEmpty: "עדיין אין מספיק דירוגים כדי לבחור את המצחיקים של הערב",
 };

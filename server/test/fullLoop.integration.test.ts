@@ -6,6 +6,7 @@ import {
   type SessionIssued,
 } from "@shared/protocol.js";
 import { startTestServer, connectClient, waitFor, type TestServer } from "./setup.js";
+import { fakeMeme } from "./fixtures/meme.js";
 
 /**
  * Real transport, real timers (LIVE-03's own end-to-end proof) — a scripted
@@ -118,11 +119,11 @@ describe("a full scripted game over real sockets survives a mid-game disconnect 
     // (a two-step rotation); c and d deliberately never submit (D-08 —
     // skipped from the rotation, still eligible to rate every step).
     const bOnHostSubmit = waitFor<LobbySnapshot>(b, SERVER_EVENTS.state);
-    host.emit(CLIENT_EVENTS.submitCaption, { text: "כיתוב של המנחה" });
+    host.emit(CLIENT_EVENTS.submitCaption, { meme: fakeMeme("host") });
     await bOnHostSubmit;
 
     const hostOnBSubmit = waitFor<LobbySnapshot>(host, SERVER_EVENTS.state);
-    b.emit(CLIENT_EVENTS.submitCaption, { text: "כיתוב של בי" });
+    b.emit(CLIENT_EVENTS.submitCaption, { meme: fakeMeme("b") });
     await hostOnBSubmit;
 
     const step0 = await waitForRatingStep(host, 0);

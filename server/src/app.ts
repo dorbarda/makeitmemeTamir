@@ -3,7 +3,7 @@ import { createServer as createHttpServer } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Server as SocketIOServer } from "socket.io";
-import { PING_INTERVAL_MS, PING_TIMEOUT_MS } from "./config.js";
+import { PING_INTERVAL_MS, PING_TIMEOUT_MS, SOCKET_MAX_BUFFER_BYTES } from "./config.js";
 import { RoomManager } from "./rooms/RoomManager.js";
 import { SessionRegistry } from "./players/SessionRegistry.js";
 import { createAuthMiddleware } from "./socket/authMiddleware.js";
@@ -47,6 +47,7 @@ export function createServer() {
     pingInterval: PING_INTERVAL_MS,
     pingTimeout: PING_TIMEOUT_MS,
     connectionStateRecovery: {},
+    maxHttpBufferSize: SOCKET_MAX_BUFFER_BYTES,
   });
 
   const roomManager = new RoomManager();

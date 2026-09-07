@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { Room } from "../src/rooms/Room.js";
 import { WRITING_COLLAPSE_MS } from "../src/config.js";
+import { fakeMeme } from "./fixtures/meme.js";
 
 // Bare-Room + vi.useFakeTimers(), following the rosterFade/hostTransfer
 // harness style: construct in beforeEach, room.dispose() + real timers in
@@ -29,7 +30,7 @@ describe("writing phase — deadline holds regardless of submissions, progress b
 
   it("ends the writing phase exactly at the deadline with one submission out of five — the four silent players change nothing", () => {
     const players = startWithPlayers(5);
-    room.submitCaption(players[0].id, "שלום");
+    room.submitCaption(players[0].id, fakeMeme("p0"));
 
     const deadlineMs = room.settings.writingSeconds * 1000;
     vi.advanceTimersByTime(deadlineMs - 1);
@@ -57,7 +58,7 @@ describe("writing phase — deadline holds regardless of submissions, progress b
     expect(readProgress()).toEqual({ submitted: 0, total: 5, submittedPlayerIds: [] });
 
     players.forEach((p, i) => {
-      const outcome = room.submitCaption(p.id, `caption ${i}`);
+      const outcome = room.submitCaption(p.id, fakeMeme(`p${i}`));
       expect(outcome.ok).toBe(true);
       expect(readProgress()?.submitted).toBe(i + 1);
     });
@@ -70,10 +71,10 @@ describe("writing phase — deadline holds regardless of submissions, progress b
 
     // A repeat submit from an already-submitted player must not double-count
     // or exceed the roster size, however many times it is retried.
-    const repeat = room.submitCaption(players[0].id, "again");
+    const repeat = room.submitCaption(players[0].id, fakeMeme("again"));
     expect(repeat).toEqual({ ok: false, error: "ALREADY_SUBMITTED" });
     expect(readProgress()?.submitted).toBe(5);
-    const repeatAgain = room.submitCaption(players[0].id, "and again");
+    const repeatAgain = room.submitCaption(players[0].id, fakeMeme("and-again"));
     expect(repeatAgain).toEqual({ ok: false, error: "ALREADY_SUBMITTED" });
     expect(readProgress()?.submitted).toBe(5);
   });
@@ -85,12 +86,12 @@ describe("writing phase — deadline holds regardless of submissions, progress b
     vi.advanceTimersByTime(deadlineMs - 30_000);
 
     for (let i = 0; i < 4; i++) {
-      room.submitCaption(players[i].id, `caption ${i}`);
+      room.submitCaption(players[i].id, fakeMeme(`p${i}`));
     }
     expect(room.phase).toBe("WRITING");
 
     const now = Date.now();
-    room.submitCaption(players[4].id, "last one");
+    room.submitCaption(players[4].id, fakeMeme("last-one"));
     expect(room.deadlineAt).toBe(now + WRITING_COLLAPSE_MS);
     expect(room.phase).toBe("WRITING");
 
@@ -106,11 +107,11 @@ describe("writing phase — deadline holds regardless of submissions, progress b
     vi.advanceTimersByTime(deadlineMs - 1200);
 
     for (let i = 0; i < 4; i++) {
-      room.submitCaption(players[i].id, `caption ${i}`);
+      room.submitCaption(players[i].id, fakeMeme(`p${i}`));
     }
 
     const deadlineBefore = room.deadlineAt;
-    room.submitCaption(players[4].id, "last one");
+    room.submitCaption(players[4].id, fakeMeme("last-one"));
     // An equality assertion, not an inequality — a one-millisecond extension
     // would fail this.
     expect(room.deadlineAt).toBe(deadlineBefore);
@@ -126,13 +127,13 @@ describe("writing phase — deadline holds regardless of submissions, progress b
     // Never submits and never returns — must not hold up the other four.
     room.detach(players[4].id);
 
-    room.submitCaption(players[0].id, "a");
-    room.submitCaption(players[1].id, "b");
-    room.submitCaption(players[2].id, "c");
+    room.submitCaption(players[0].id, fakeMeme("a"));
+    room.submitCaption(players[1].id, fakeMeme("b"));
+    room.submitCaption(players[2].id, fakeMeme("c"));
     expect(room.phase).toBe("WRITING");
 
     const now = Date.now();
-    room.submitCaption(players[3].id, "d"); // the last CONNECTED player
+    room.submitCaption(players[3].id, fakeMeme("d")); // the last CONNECTED player
     expect(room.deadlineAt).toBe(now + WRITING_COLLAPSE_MS);
 
     vi.advanceTimersByTime(WRITING_COLLAPSE_MS);
@@ -148,7 +149,7 @@ describe("writing phase — deadline holds regardless of submissions, progress b
 
   it("refuses WRONG_PHASE for a submit-caption before the game has started", () => {
     const host = room.addPlayer("Host", "t-host");
-    expect(room.submitCaption(host.id, "מוקדם מדי")).toEqual({
+    expect(room.submitCaption(host.id, fakeMeme("too-early"))).toEqual({
       ok: false,
       error: "WRONG_PHASE",
     });
@@ -156,9 +157,10 @@ describe("writing phase — deadline holds regardless of submissions, progress b
 
   it("refuses ALREADY_SUBMITTED on a second submit from the same player and never overwrites the stored caption", () => {
     const players = startWithPlayers(5);
-    expect(room.submitCaption(players[0].id, "ראשון").ok).toBe(true);
-    const repeat = room.submitCaption(players[0].id, "שני");
+    const firstMeme = fakeMeme("first");
+    expect(room.submitCaption(players[0].id, firstMeme).ok).toBe(true);
+    const repeat = room.submitCaption(players[0].id, fakeMeme("second"));
     expect(repeat).toEqual({ ok: false, error: "ALREADY_SUBMITTED" });
-    expect(room.submissions.get(players[0].id)).toBe("ראשון");
+    expect(room.submissions.get(players[0].id)).toBe(firstMeme);
   });
 });

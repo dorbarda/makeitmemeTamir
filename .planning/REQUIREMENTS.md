@@ -44,7 +44,7 @@ Requirements for the party night. Each maps to a roadmap phase.
 
 ### Memes & Souvenirs
 
-- [ ] **MEME-01**: A meme image is produced with the Hebrew caption drawn onto the photo, laid out right-to-left correctly
+- [ ] **MEME-01**: A meme image is produced with Hebrew caption(s) drawn onto the photo, laid out right-to-left correctly. **Scope expanded 2026-09-07** (Phase 3 real-phone playtest feedback): the player can add MULTIPLE caption text boxes on one photo, and DRAG each one to any position before finishing — not one auto-placed caption. Chosen knowingly as the most ambitious of three options offered, with the tradeoff stated plainly: this is real added engineering (canvas hit-testing, touch-drag on a phone screen, RTL text box positioning) that risks the one-week deadline more than the simpler alternatives. Belongs to Phase 5 (Hebrew RTL Meme Compositor) — implementation decisions on the exact interaction happen at that phase's discussion, this note only locks the scope.
 - [ ] **MEME-02**: A "best of the night" screen shows the highest-voted memes from the whole game
 - [ ] **MEME-03**: A player can save a meme to their phone or share it
 

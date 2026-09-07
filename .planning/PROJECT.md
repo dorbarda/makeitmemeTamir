@@ -91,6 +91,7 @@ write-a-caption-and-rate in Hebrew without anyone getting stuck, disconnected, o
 | Caption drawn onto the photo for download | The saved memes are the souvenir; text underneath the photo does not read as a meme | — Pending |
 | Reliability prioritised over polish | If it breaks in front of 15 people the night is spoiled; a plain game that works wins | — Pending |
 | Own implementation, not a copy of makeitmeme.com | Keeps the project clean legally; the game format itself is free to use | — Pending |
+| Meme editor: multiple draggable captions, not one auto-placed | User chose this knowing it is the highest-effort of three options and the one most likely to threaten the one-week deadline; real-phone Phase 3 feedback drove the request | — Pending, revisit if Phase 5 timing gets tight |
 
 ## Evolution
 

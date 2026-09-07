@@ -8,6 +8,7 @@ import {
   type ProtocolError,
 } from "@shared/protocol.js";
 import { startTestServer, connectClient, waitFor, type TestServer } from "./setup.js";
+import { fakeMeme } from "./fixtures/meme.js";
 
 // Bare-Room + vi.useFakeTimers(), following the rosterFade/writingPhase
 // harness style: construct in beforeEach, room.dispose() + real timers in
@@ -44,9 +45,9 @@ describe("rating step clock — closes on time, collapses only earlier, advances
    */
   function reachStep0() {
     const players = startWithPlayers(5);
-    room.submitCaption(players[0].id, "caption 0");
-    room.submitCaption(players[1].id, "caption 1");
-    room.submitCaption(players[2].id, "caption 2");
+    room.submitCaption(players[0].id, fakeMeme("p0"));
+    room.submitCaption(players[1].id, fakeMeme("p1"));
+    room.submitCaption(players[2].id, fakeMeme("p2"));
 
     vi.advanceTimersByTime(room.settings.writingSeconds * 1000);
     expect(room.phase).toBe("REVEAL_BREAK");
@@ -61,9 +62,9 @@ describe("rating step clock — closes on time, collapses only earlier, advances
 
   it("writing closes into REVEAL_BREAK for exactly BETWEEN_PHASES_MS, then RATING at step 0 of 3", () => {
     const players = startWithPlayers(5);
-    room.submitCaption(players[0].id, "a");
-    room.submitCaption(players[1].id, "b");
-    room.submitCaption(players[2].id, "c");
+    room.submitCaption(players[0].id, fakeMeme("a"));
+    room.submitCaption(players[1].id, fakeMeme("b"));
+    room.submitCaption(players[2].id, fakeMeme("c"));
 
     vi.advanceTimersByTime(room.settings.writingSeconds * 1000);
     expect(room.phase).toBe("REVEAL_BREAK");
@@ -320,11 +321,11 @@ describe("submit-rating refusals over real sockets (T-02-05, T-02-06, T-02-16)",
     // c deliberately never submits (D-08 — skipped from the rotation, still
     // eligible to rate).
     const bOnHostSubmit = waitFor<LobbySnapshot>(b, SERVER_EVENTS.state);
-    host.emit(CLIENT_EVENTS.submitCaption, { text: "כיתוב של המנחה" });
+    host.emit(CLIENT_EVENTS.submitCaption, { meme: fakeMeme("host") });
     await bOnHostSubmit;
 
     const hostOnBSubmit = waitFor<LobbySnapshot>(host, SERVER_EVENTS.state);
-    b.emit(CLIENT_EVENTS.submitCaption, { text: "כיתוב של בי" });
+    b.emit(CLIENT_EVENTS.submitCaption, { meme: fakeMeme("b") });
     await hostOnBSubmit;
 
     const hostInRating = await waitForPhase(host, "RATING");

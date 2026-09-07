@@ -26,8 +26,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Room, Session & Reconnect Foundation** - Players can create/join a room by code or QR with a unique name, see who's in the room live, and survive a phone lock or refresh without losing identity or score
 - [x] **Phase 2: Server-Authoritative Round Engine** - The server owns every phase's clock so the game never freezes on a missing or slow player
-- [ ] **Phase 3: Core Loop Checkpoint (Real Phones, End-to-End)** - A full round of write-a-caption, rate memes one-at-a-time, and score is proven working on real phones before deeper features are built
-- [ ] **Phase 4: Full Round, Rating & Scoring Completion** - The complete round loop ships: no-repeat photos, photo swap, cannot-rate-own-meme with hidden ratings until each meme's step closes, ranked round results, running score totals, final winner, and best-of-night
+- [x] **Phase 3: Core Loop Checkpoint (Real Phones, End-to-End)** - A full round of write-a-caption, rate memes one-at-a-time, and score is proven working on real phones before deeper features are built
+- [x] **Phase 4: Full Round, Rating & Scoring Completion** - The complete round loop ships: no-repeat photos, photo swap, cannot-rate-own-meme with hidden ratings until each meme's step closes, ranked round results, running score totals, final winner, and best-of-night
 - [ ] **Phase 5: Hebrew RTL Meme Compositor & Souvenir** - Players can produce and keep a correctly rendered, right-to-left Hebrew meme image as their souvenir
 - [ ] **Phase 6: Host Controls & RTL Interface Hardening** - The host has recovery tools for live mishaps, and the whole interface reads correctly in Hebrew on iPhone and Android
 - [ ] **Phase 7: Deployment & Hosting** - The game is live on a public URL, on a hosting choice verified to hold persistent connections, with Tamir's photos loaded
@@ -130,7 +130,16 @@ Plans:
   4. Each round's score accumulates into a running game total, and a final winner screen appears once the last round ends
   5. A "best of the night" screen shows the highest-scoring memes from across the whole game, tracked from round one rather than reconstructed at the end
 
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+**Wave 1**
+
+- [x] 04-01-PLAN.md — No-repeat photo tracking, the one-time photo swap, and real ranked round results (VOTE-05 verified, not rebuilt)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [x] 04-02-PLAN.md — Running score display, the tied-winner screen, and the incrementally-tracked best-of-the-night screen
 **UI hint**: yes
 
 ### Phase 5: Hebrew RTL Meme Compositor & Souvenir
@@ -143,7 +152,28 @@ Plans:
   1. A realistic caption mixing Hebrew, digits, and a Latin word is drawn onto the photo and reads correctly right-to-left, confirmed by visually inspecting the actual output image — not just a single clean Hebrew test word
   2. A player can save the finished meme image to their phone or share it directly, with the save/share flow specifically confirmed working on a real iPhone in Safari
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+**Wave 1**
+
+- [x] 05-01-PLAN.md — Wire contract: server accepts, validates, and stores `meme` (base64 PNG) in place of `caption`+`photoUrl`
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 05-02-PLAN.md — The tracer: single-box canvas compositor in WritingPanel, rasterize, submit as meme, rendered identically in RatingPanel/RoundEndPanel/GameEndPanel
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 05-03-PLAN.md — Multi-box drag editor: up to 3 caption boxes, pointer-event drag-and-drop, hit-testing
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 05-04-PLAN.md — Save/share for every author, plus best-of-night view/export reuse (D-03)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 05-05-PLAN.md — Full regression and the real-device check (touch-drag, HEB-03 RTL rendering, iOS save/share)
 
 ### Phase 6: Host Controls & RTL Interface Hardening
 
@@ -209,9 +239,9 @@ natural requirement-coverage position.)
 |-------|----------------|--------|-----------|
 | 1. Room, Session & Reconnect Foundation | 4/4 | Complete | 2026-09-06 |
 | 2. Server-Authoritative Round Engine | 5/5 | Complete | 2026-09-06 |
-| 3. Core Loop Checkpoint (Real Phones, End-to-End) | 0/TBD | Not started | - |
-| 4. Full Round, Rating & Scoring Completion | 0/TBD | Not started | - |
-| 5. Hebrew RTL Meme Compositor & Souvenir | 0/TBD | Not started | - |
+| 3. Core Loop Checkpoint (Real Phones, End-to-End) | 1/1 | Complete | 2026-09-06 |
+| 4. Full Round, Rating & Scoring Completion | 2/2 | Complete | 2026-09-07 |
+| 5. Hebrew RTL Meme Compositor & Souvenir | 0/5 | Not started | - |
 | 6. Host Controls & RTL Interface Hardening | 0/TBD | Not started | - |
 | 7. Deployment & Hosting | 0/TBD | Not started | - |
 | 8. Load & Capacity Verification | 0/TBD | Not started | - |

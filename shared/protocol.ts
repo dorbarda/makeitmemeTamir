@@ -50,8 +50,7 @@ export type RatingValue = 1 | 2 | 3;
 export type RatingStepView = {
   index: number;
   total: number;
-  caption: string;
-  placeholderId: number;
+  meme: string; // base64-encoded PNG (RESEARCH.md rasterize-and-transmit) — replaces caption+photoUrl
   youAreAuthor: boolean;
   youMayRate: boolean;
   youHaveRated: boolean;
@@ -68,12 +67,36 @@ export type RatingStepView = {
 export type RoundEndEntry = {
   authorId: string;
   authorName: string;
-  caption: string;
+  meme: string;
   ratings: RatingValue[];
   eligibleAtClose: number;
+  // VOTE-06 (plan 04-01) — the server-computed sum of `ratings`, added once
+  // inside buildRoundEndView and never re-derived client-side.
+  score: number;
 };
 
 export type RoundEndView = { entries: RoundEndEntry[] };
+
+/**
+ * One meme in the "best of the night" list (MEME-02/D-04). Carries
+ * everything the client needs to render one entry without a second lookup —
+ * `Room.bestOfNight` is the running top-3 this type describes, tracked
+ * incrementally round by round, never recomputed by scanning history.
+ */
+export type BestOfEntry = {
+  authorId: string;
+  authorName: string;
+  meme: string;
+  score: number;
+};
+
+/**
+ * The GAME_END-only view (plan 04-02): `winners` is every player tied for
+ * the single highest score, never just one on a tie (SCORE-04/D-03);
+ * `bestOfNight` is the real top-3 highest-scoring memes across the whole
+ * game (MEME-02/D-04).
+ */
+export type GameEndView = { winners: PlayerView[]; bestOfNight: BestOfEntry[] };
 
 export type LobbySnapshot = {
   phase: RoomPhase;
@@ -95,9 +118,13 @@ export type LobbySnapshot = {
   round: RoundView | null; // null only in LOBBY
   progress: SubmissionProgress | null; // filled by plan 02-03
   youSubmitted: boolean; // filled by plan 02-03
-  yourPlaceholderId: number | null; // filled by plan 02-03
+  yourPhotoUrl: string | null; // filled by plan 03-01 — this player's own assigned photo (D-01)
+  // ROUND-06/D-01/D-02 (plan 04-01) — true only during WRITING, before this
+  // player has submitted or already used this round's one swap.
+  youCanSwapPhoto: boolean;
   ratingStep: RatingStepView | null; // filled by plan 02-04
-  roundEnd: RoundEndView | null; // filled by plan 02-05
+  roundEnd: RoundEndView | null; // filled by plan 02-05 — populated only in ROUND_END (plan 04-02 split this from GAME_END)
+  gameEnd: GameEndView | null; // plan 04-02 — populated only in GAME_END
 };
 
 export type SessionIssued = { token: string; playerId: string };
@@ -115,10 +142,12 @@ export type ErrorCode =
   | "NOT_ENOUGH_PLAYERS"
   | "WRONG_PHASE"
   | "CAPTION_REQUIRED"
+  | "MEME_TOO_LARGE"
   | "ALREADY_SUBMITTED"
   | "ALREADY_RATED"
   | "CANNOT_RATE_OWN"
-  | "RATING_OUT_OF_RANGE";
+  | "RATING_OUT_OF_RANGE"
+  | "SWAP_ALREADY_USED";
 
 export type ProtocolError = { code: ErrorCode; messageHe: string };
 
@@ -130,8 +159,9 @@ export const CLIENT_EVENTS = {
   requestResync: "request-resync", // {}
   startGame: "start-game", // {}  — host-only, no payload (added in plan 02-01)
   changeSettings: "change-settings", // { key: SettingKey, value: number }  (added in plan 02-01; wired in 02-02)
-  submitCaption: "submit-caption", // { text: string }  (added in plan 02-01; wired in 02-03)
+  submitCaption: "submit-caption", // { meme: string } — base64-encoded PNG (Phase 5, replaces { text: string })
   submitRating: "submit-rating", // { stepIndex: number, value: RatingValue }  (added in plan 02-01; wired in 02-04)
+  swapPhoto: "swap-photo", // {}  — host-blind, no payload; ROUND-06 (added in plan 04-01)
 } as const;
 
 export const SERVER_EVENTS = {

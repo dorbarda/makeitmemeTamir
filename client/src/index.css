@@ -227,6 +227,17 @@ li {
   font-weight: 700;
 }
 
+/* ROUND-06/D-01 — the photo swap button. An outlined secondary button so it
+   reads as visually secondary to the primary filled "send caption" button
+   and is never tapped by mistake, while still inheriting the global
+   button rule's 44px tap-target floor. */
+.swap-photo-button {
+  background: transparent;
+  border: 1px solid currentColor;
+  color: inherit;
+  margin: 0 0 0.75rem;
+}
+
 /* VOTE-01/03/04 — the per-meme rating step. Mobile-first, no fixed widths,
    same shape as .writing-panel. */
 .rating-panel {
@@ -273,5 +284,95 @@ li {
    letter-spacing on the Hebrew text. */
 .round-end-entry {
   overflow-wrap: break-word;
+}
+
+/* VOTE-06 — the real point total, matching .writing-progress's existing
+   "important number" emphasis style. No letter-spacing on Hebrew/digit
+   text, per project convention. */
+.round-end-score {
+  font-weight: 600;
+  word-spacing: 0.1em;
+}
+
+/* D-01 — the player's own photo during WRITING, and the current meme's photo
+   during RATING. Relative width + max-width, never a fixed pixel size —
+   mirrors .qr-code's established pattern for an element that overflowed a
+   phone viewport before. */
+.meme-photo {
+  display: block;
+  width: 100%;
+  max-width: 24rem;
+  height: auto;
+  margin: 0 auto 0.75rem;
+  border-radius: 0.5rem;
+}
+
+/* D-03 — the between-rounds scoreboard. Mobile-first, no fixed widths, same
+   shape as .round-end-panel. */
+.scoreboard {
+  margin: 1.25rem 0 0;
+}
+
+.scoreboard-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.scoreboard-entry {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid currentColor;
+  border-radius: 0.5rem;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+
+/* SCORE-04/MEME-02 — the game-end screen (winner banner, scoreboard,
+   best-of-the-night). Mobile-first, no fixed widths, same shape as
+   .round-end-panel. */
+.game-end-panel {
+  margin: 1rem 0;
+}
+
+/* D-03 — visually set apart so a tie's multiple winners read as a
+   celebration, not a plain list item. */
+.winner-banner {
+  margin: 0 0 1.25rem;
+  padding: 0.875rem 1rem;
+  border: 2px solid #1f6feb;
+  border-radius: 0.5rem;
+}
+
+.winner-list {
+  margin: 0.5rem 0 0;
+}
+
+.winner-entry {
+  font-weight: 700;
+  font-size: 1.125rem;
+}
+
+.best-of-night {
+  margin: 1.25rem 0 0;
+}
+
+.best-of-list {
+  margin: 0.5rem 0 0;
+}
+
+.best-of-entry {
+  margin: 0 0 1rem;
+}
+
+/* Matches .writing-progress's "important number" emphasis convention — no
+   letter-spacing on Hebrew text. */
+.best-of-meta {
+  font-weight: 600;
+  word-spacing: 0.1em;
 }
 
