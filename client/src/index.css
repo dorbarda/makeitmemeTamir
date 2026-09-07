@@ -451,3 +451,66 @@ li {
   border-radius: 0.5rem;
 }
 
+/* plan 06-02 — the host-only "break glass" recovery panel (LIVE-04..07).
+   Same bordered-box shape as .settings-panel, kept as its own class so this
+   file never has to import a Lobby-specific class name. */
+.host-controls-panel {
+  margin: 1rem 0;
+  padding: 0.875rem 1rem;
+  border: 1px solid currentColor;
+  border-radius: 0.5rem;
+}
+
+.host-controls-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+}
+
+/* Outlined secondary, matching .settings-preset's shape — all four
+   "break-glass" buttons are supplementary, never the primary filled style. */
+.host-controls-button {
+  flex: 1 1 45%;
+  min-width: 3.5rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 0.5rem;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  font-weight: 600;
+}
+
+/* Between .reconnect-overlay's z-index:10 and .save-meme-fallback's
+   z-index:20 — this app never shows both a host modal and the save/share
+   fallback at once, but the ordering keeps a host modal above the passive
+   reconnect banner if both were ever visible. */
+.host-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+/* Same dark-surface convention .reconnect-overlay already uses. */
+.host-modal {
+  background: #1f2937;
+  color: #fff;
+  padding: 1.25rem;
+  border-radius: 0.5rem;
+  max-width: 24rem;
+  width: 100%;
+  text-align: center;
+}
+
+.host-modal-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1rem 0 0;
+}
+
