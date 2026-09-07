@@ -85,6 +85,12 @@ export type SkipRoundOutcome =
   | { ok: true }
   | { ok: false; error: "NOT_HOST" | "WRONG_PHASE" };
 
+/** Result of a remove-player attempt — never throws, always tells the
+ * caller why. Never returns anything but NOT_HOST or `{ ok: true }`: a
+ * forged, self-targeted, or already-removed target is a safe no-op, never a
+ * distinct error code (Phase 6, LIVE-05, this plan's own prohibitions). */
+export type RemovePlayerOutcome = { ok: true } | { ok: false; error: "NOT_HOST" };
+
 // Standard, correctly-padded base64 — exactly what canvas.toBlob() ->
 // FileReader.readAsDataURL() -> stripping the "data:image/png;base64,"
 // prefix always produces (T-05-02).
@@ -896,6 +902,38 @@ export class Room {
     }
 
     this.finishRound(true);
+    return { ok: true };
+  }
+
+  /**
+   * Host-only "break-glass" recovery action (LIVE-05): forces a real,
+   * currently-present, non-self target out of live play by reusing `detach`
+   * verbatim (D-02) — the same machinery a natural disconnect already goes
+   * through, never a new "banned" concept. Refused with `NOT_HOST` first.
+   * `targetPlayerId` is untrusted client input (T-06-02): only when it is a
+   * string, is not the acting host's own id, and names a player still
+   * present in `this.players` does `detach()` run at all — a forged, stale,
+   * or self-targeted id is a safe no-op that never touches
+   * `photoAssignments`/`ratings`/`submissions` (`detach()` itself only ever
+   * mutates `connected`/fade-timer/host-transfer bookkeeping, so there is
+   * nothing here to corrupt). Always returns `{ ok: true }` once past the
+   * host check, regardless of whether the inner condition matched — a bad or
+   * repeated target is indistinguishable from "already handled" and never
+   * surfaces as an error (D-02/LIVE-05's idempotency and concurrency edges).
+   */
+  removePlayer(playerId: string, targetPlayerId: unknown): RemovePlayerOutcome {
+    if (playerId !== this.hostId) {
+      return { ok: false, error: "NOT_HOST" };
+    }
+
+    if (
+      typeof targetPlayerId === "string" &&
+      targetPlayerId !== playerId &&
+      this.players.has(targetPlayerId)
+    ) {
+      this.detach(targetPlayerId);
+    }
+
     return { ok: true };
   }
 

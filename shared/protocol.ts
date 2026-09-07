@@ -171,6 +171,7 @@ export const CLIENT_EVENTS = {
   submitRating: "submit-rating", // { stepIndex: number, value: RatingValue }  (added in plan 02-01; wired in 02-04)
   swapPhoto: "swap-photo", // {}  — host-blind, no payload; ROUND-06 (added in plan 04-01)
   skipRound: "skip-round", // {}  — host-only, no payload (Phase 6, LIVE-04)
+  removePlayer: "remove-player", // { targetPlayerId: string } — host-only (Phase 6, LIVE-05)
 } as const;
 
 export const SERVER_EVENTS = {

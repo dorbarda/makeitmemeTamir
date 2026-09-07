@@ -4,6 +4,7 @@ import {
   SERVER_EVENTS,
   type LobbySnapshot,
   type ProtocolError,
+  type SessionIssued,
 } from "@shared/protocol.js";
 import { startTestServer, connectClient, waitFor, type TestServer } from "./setup.js";
 import { fakeMeme } from "./fixtures/meme.js";
@@ -49,6 +50,35 @@ describe("host recovery actions — host-only, discard-not-partial-credit, never
     await Promise.all([stateC1, stateHost3, stateB2]);
 
     return { host, b, c, roomCode };
+  }
+
+  /** Same as `makeRoomWithThreePlayers`, but also captures each player's
+   * issued `{ token, playerId }` — needed for the remove-player rejoin test,
+   * which must reconnect with `b`'s ORIGINAL session token. */
+  async function makeRoomWithThreePlayersAndSessions() {
+    const host = await connectClient(server.url);
+    const sessionHost = waitFor<SessionIssued>(host, SERVER_EVENTS.session);
+    const stateHost1 = waitFor<LobbySnapshot>(host, SERVER_EVENTS.state);
+    host.emit(CLIENT_EVENTS.createRoom, { name: "מנחה" });
+    const [issuedHost, hostSnapshot] = await Promise.all([sessionHost, stateHost1]);
+    const roomCode = hostSnapshot.roomCode;
+
+    const b = await connectClient(server.url);
+    const sessionB = waitFor<SessionIssued>(b, SERVER_EVENTS.session);
+    const stateB1 = waitFor<LobbySnapshot>(b, SERVER_EVENTS.state);
+    const stateHost2 = waitFor<LobbySnapshot>(host, SERVER_EVENTS.state);
+    b.emit(CLIENT_EVENTS.joinRoom, { roomCode, name: "בי" });
+    const [issuedB] = await Promise.all([sessionB, stateB1, stateHost2]);
+
+    const c = await connectClient(server.url);
+    const sessionC = waitFor<SessionIssued>(c, SERVER_EVENTS.session);
+    const stateC1 = waitFor<LobbySnapshot>(c, SERVER_EVENTS.state);
+    const stateHost3 = waitFor<LobbySnapshot>(host, SERVER_EVENTS.state);
+    const stateB2 = waitFor<LobbySnapshot>(b, SERVER_EVENTS.state);
+    c.emit(CLIENT_EVENTS.joinRoom, { roomCode, name: "גי" });
+    const [issuedC] = await Promise.all([sessionC, stateC1, stateHost3, stateB2]);
+
+    return { host, b, c, roomCode, issuedHost, issuedB, issuedC };
   }
 
   function waitForPhase(
@@ -164,6 +194,131 @@ describe("host recovery actions — host-only, discard-not-partial-credit, never
         expect(room.phase).toBe("WRITING");
         expect(room.roundIndex).toBe(2);
       });
+    });
+  });
+
+  describe("remove-player (LIVE-05)", () => {
+    it("a non-host remove-player produces NOT_HOST", async () => {
+      const { host, b, c, roomCode } = await makeRoomWithThreePlayersAndSessions();
+      void roomCode;
+
+      const errorOnB = waitFor<ProtocolError>(b, SERVER_EVENTS.error);
+      const cSessionOnB = await (async () => {
+        // Need c's playerId — request-resync on c to read it back.
+        const resync = waitFor<LobbySnapshot>(c, SERVER_EVENTS.state);
+        c.emit(CLIENT_EVENTS.requestResync);
+        return resync;
+      })();
+      const targetPlayerId = cSessionOnB.you.id;
+
+      b.emit(CLIENT_EVENTS.removePlayer, { targetPlayerId });
+      const error = await errorOnB;
+      expect(error.code).toBe("NOT_HOST");
+
+      const resync = waitFor<LobbySnapshot>(host, SERVER_EVENTS.state);
+      host.emit(CLIENT_EVENTS.requestResync);
+      const snapshot = await resync;
+      const cView = snapshot.players.find((p) => p.id === targetPlayerId);
+      expect(cView?.connected).toBe(true);
+
+      host.close();
+      b.close();
+      c.close();
+    });
+
+    it("the host removes a connected player, force-closing their socket; they rejoin later with the same identity and score intact", async () => {
+      const { host, b, c, issuedB } = await makeRoomWithThreePlayersAndSessions();
+
+      const bDisconnected = new Promise<void>((resolve) => {
+        b.once("disconnect", () => resolve());
+      });
+      const stateOnHost = waitFor<LobbySnapshot>(host, SERVER_EVENTS.state);
+      const stateOnC = waitFor<LobbySnapshot>(c, SERVER_EVENTS.state);
+      host.emit(CLIENT_EVENTS.removePlayer, { targetPlayerId: issuedB.playerId });
+
+      await bDisconnected;
+      const [hostSnapshot, cSnapshot] = await Promise.all([stateOnHost, stateOnC]);
+      for (const snapshot of [hostSnapshot, cSnapshot]) {
+        const bView = snapshot.players.find((p) => p.id === issuedB.playerId);
+        expect(bView?.connected).toBe(false);
+      }
+
+      const b2 = await connectClient(server.url, issuedB.token);
+      const stateB2 = waitFor<LobbySnapshot>(b2, SERVER_EVENTS.state);
+      b2.emit(CLIENT_EVENTS.rejoin);
+      const rejoinedSnapshot = await stateB2;
+
+      expect(rejoinedSnapshot.you.id).toBe(issuedB.playerId);
+      const rejoinedView = rejoinedSnapshot.players.find((p) => p.id === issuedB.playerId);
+      expect(rejoinedView?.name).toBe("בי");
+      expect(rejoinedView?.score).toBe(0);
+      expect(rejoinedView?.connected).toBe(true);
+
+      host.close();
+      b2.close();
+      c.close();
+    });
+
+    it("removing a nonexistent targetPlayerId, or the host's own id, is a safe no-op", async () => {
+      const { host, b, c, issuedHost } = await makeRoomWithThreePlayersAndSessions();
+
+      const errorOnFakeTarget = waitFor<ProtocolError>(host, SERVER_EVENTS.error, 500).then(
+        () => "error" as const,
+        () => "timeout" as const,
+      );
+      host.emit(CLIENT_EVENTS.removePlayer, { targetPlayerId: "not-a-real-id" });
+      expect(await errorOnFakeTarget).toBe("timeout");
+
+      const resync1 = waitFor<LobbySnapshot>(host, SERVER_EVENTS.state);
+      host.emit(CLIENT_EVENTS.requestResync);
+      const snapshot1 = await resync1;
+      expect(snapshot1.players).toHaveLength(3);
+
+      const errorOnSelfTarget = waitFor<ProtocolError>(host, SERVER_EVENTS.error, 500).then(
+        () => "error" as const,
+        () => "timeout" as const,
+      );
+      host.emit(CLIENT_EVENTS.removePlayer, { targetPlayerId: issuedHost.playerId });
+      expect(await errorOnSelfTarget).toBe("timeout");
+
+      const resync2 = waitFor<LobbySnapshot>(host, SERVER_EVENTS.state);
+      host.emit(CLIENT_EVENTS.requestResync);
+      const snapshot2 = await resync2;
+      const hostView = snapshot2.players.find((p) => p.id === issuedHost.playerId);
+      expect(hostView?.connected).toBe(true);
+      expect(hostView?.isHost).toBe(true);
+
+      host.close();
+      b.close();
+      c.close();
+    });
+
+    it("removing the same already-disconnected target twice never crashes", async () => {
+      const { host, c, issuedB, b } = await makeRoomWithThreePlayersAndSessions();
+
+      const bDisconnected = new Promise<void>((resolve) => {
+        b.once("disconnect", () => resolve());
+      });
+      const stateOnHost1 = waitFor<LobbySnapshot>(host, SERVER_EVENTS.state);
+      host.emit(CLIENT_EVENTS.removePlayer, { targetPlayerId: issuedB.playerId });
+      await bDisconnected;
+      await stateOnHost1;
+
+      // Second removal of the same, now-already-disconnected target.
+      const stateOnHost2 = waitFor<LobbySnapshot>(host, SERVER_EVENTS.state);
+      host.emit(CLIENT_EVENTS.removePlayer, { targetPlayerId: issuedB.playerId });
+      const secondSnapshot = await stateOnHost2;
+      const bView = secondSnapshot.players.find((p) => p.id === issuedB.playerId);
+      expect(bView?.connected).toBe(false);
+
+      // Server still responds normally afterward — proof it never crashed.
+      const resync = waitFor<LobbySnapshot>(host, SERVER_EVENTS.state);
+      host.emit(CLIENT_EVENTS.requestResync);
+      const resyncSnapshot = await resync;
+      expect(resyncSnapshot.players).toHaveLength(3);
+
+      host.close();
+      c.close();
     });
   });
 });

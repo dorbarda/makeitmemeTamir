@@ -291,6 +291,56 @@ export function registerHandlers(io: Server, socket: Socket, deps: HandlerDeps):
     room.broadcast(io);
   });
 
+  socket.on(
+    CLIENT_EVENTS.removePlayer,
+    ({ targetPlayerId }: { targetPlayerId: unknown }) => {
+      if (!data.playerId || !data.roomCode) {
+        emitError(socket, { code: "NOT_IN_ROOM", messageHe: HEBREW_ERRORS.NOT_IN_ROOM });
+        return;
+      }
+
+      const room = roomManager.findRoom(data.roomCode);
+      if (!room) {
+        emitError(socket, { code: "ROOM_NOT_FOUND", messageHe: HEBREW_ERRORS.ROOM_NOT_FOUND });
+        return;
+      }
+
+      // targetPlayerId is passed through exactly as received — validation
+      // lives entirely inside Room.removePlayer (T-06-02). The acting host
+      // is always socket.data.playerId; the payload carries no identity
+      // field a client could forge.
+      const result = room.removePlayer(data.playerId, targetPlayerId);
+      if (!result.ok) {
+        emitError(socket, { code: result.error, messageHe: HEBREW_ERRORS[result.error] });
+        return;
+      }
+
+      // D-02 — force-close the target's live transport so removal is a REAL
+      // loss of connection, not merely a state flag their own open tab could
+      // ignore. This triggers the "disconnect" listener below, which calls
+      // room.detach(...) a second time (harmless — detach is idempotent) and
+      // its own room.broadcast(io) (harmless — an extra broadcast of
+      // already-correct state).
+      //
+      // `targetPlayerId !== data.playerId` guards against a self-targeted
+      // no-op (Room.removePlayer already refuses to detach the acting host
+      // themself) also force-closing the ACTING SOCKET's own connection — a
+      // bug found during implementation: a bare playerId match alone would
+      // disconnect the host's own live socket whenever they targeted their
+      // own id, contradicting removePlayer's documented "self-targeted id is
+      // a safe no-op" behavior.
+      if (typeof targetPlayerId === "string" && targetPlayerId !== data.playerId) {
+        for (const s of io.sockets.sockets.values()) {
+          if (s.data?.playerId === targetPlayerId && s.rooms.has(room.code)) {
+            s.disconnect(true);
+          }
+        }
+      }
+
+      room.broadcast(io);
+    },
+  );
+
   socket.on(CLIENT_EVENTS.rejoin, () => {
     if (!data.playerId || !data.roomCode) {
       // No known binding for this socket's token (missing, expired, or a
