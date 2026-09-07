@@ -4,6 +4,7 @@ import { Countdown } from "../components/Countdown";
 import { WritingPanel } from "./round/WritingPanel";
 import { RatingPanel } from "./round/RatingPanel";
 import { RoundEndPanel } from "./round/RoundEndPanel";
+import { GameEndPanel } from "./round/GameEndPanel";
 
 type RoundProps = {
   snapshot: LobbySnapshot;
@@ -26,8 +27,10 @@ const PHASE_HEADINGS: Record<Exclude<RoomPhase, "LOBBY">, string> = {
  * appearing only on some screens; it renders nothing itself when
  * `deadlineAt` is null. `WritingPanel` mounts only while `phase ===
  * "WRITING"` (plan 02-03); `RatingPanel` mounts only while `phase ===
- * "RATING"` (plan 02-04); `RoundEndPanel` mounts for both `"ROUND_END"` and
- * `"GAME_END"` (plan 02-05). During `REVEAL_BREAK` no panel mounts — no
+ * "RATING"` (plan 02-04); `RoundEndPanel` mounts only for `"ROUND_END"` and
+ * `GameEndPanel` mounts only for `"GAME_END"` (plan 04-02 split what used to
+ * be one shared panel into these two dedicated components). During
+ * `REVEAL_BREAK` no panel mounts — no
  * meme, no caption, nothing to tap during the break — only the heading and
  * countdown are shown. The countdown already renders nothing once
  * `deadlineAt` is null, so `GAME_END`'s terminal, timer-less state needs no
@@ -35,7 +38,8 @@ const PHASE_HEADINGS: Record<Exclude<RoomPhase, "LOBBY">, string> = {
  *
  * The baseline roster below only mounts for phases where no panel already
  * lists every player: `WritingPanel` shows the same names with a submission
- * checkmark, and `RoundEndPanel` shows them ranked with their score — this
+ * checkmark, `RoundEndPanel` shows them ranked with their score, and
+ * `GameEndPanel` shows the winner banner plus that same scoreboard — this
  * screen showing a third, plainer copy of the same list read as a visible
  * duplicate bug (reported during the Phase 3 real-phone playtest). `RATING`
  * and `REVEAL_BREAK` have no player list of their own, so it still mounts
@@ -59,9 +63,8 @@ export function Round({ snapshot }: RoundProps) {
 
       {snapshot.phase === "WRITING" && <WritingPanel snapshot={snapshot} />}
       {snapshot.phase === "RATING" && <RatingPanel snapshot={snapshot} />}
-      {(snapshot.phase === "ROUND_END" || snapshot.phase === "GAME_END") && (
-        <RoundEndPanel snapshot={snapshot} />
-      )}
+      {snapshot.phase === "ROUND_END" && <RoundEndPanel snapshot={snapshot} />}
+      {snapshot.phase === "GAME_END" && <GameEndPanel snapshot={snapshot} />}
 
       {!PANEL_ALREADY_LISTS_PLAYERS.has(snapshot.phase) && (
         <ul>

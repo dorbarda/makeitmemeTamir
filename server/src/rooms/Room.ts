@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import type { Server } from "socket.io";
 import {
   SERVER_EVENTS,
+  type BestOfEntry,
+  type GameEndView,
   type GameSettings,
   type LobbySnapshot,
   type PlayerView,
@@ -125,6 +127,12 @@ export class Room {
    * `enterWriting()` via `assignPhotos`; a player who joins after that has
    * already run gets a lazy fallback draw via `photoUrlFor`. */
   photoAssignments = new Map<string, string>();
+  /** MEME-02/D-04 — the running top-3 highest-scoring memes across the whole
+   * game so far, always length <= 3, always sorted highest-score-first.
+   * Never cleared between rounds, never recomputed from round history —
+   * `updateBestOfNight()` is the sole mutation site, called only from
+   * `enterRoundEnd()`. */
+  bestOfNight: BestOfEntry[] = [];
   /** ROUND-02 — every photo filename a player has ever been shown this game,
    * across every round. Never cleared at `enterWriting()`; only a single
    * player's own set is cleared (via `eligiblePoolFor`) once they have seen
@@ -626,6 +634,42 @@ export class Room {
   }
 
   /**
+   * MEME-02/D-04 — updates the running "best of the night" list from this
+   * round that just closed. Walks `this.rotation` the same way
+   * `applyRoundScores` does: a step with no entry in `this.ratings` (nobody
+   * rated it) contributes nothing. For every rated step, pushes one entry
+   * carrying everything the client needs to render it (photo, caption,
+   * author, score), then re-sorts the whole list highest-score-first and
+   * trims it to length 3. `Array.prototype.sort`'s stability means a later
+   * round's meme with a score EQUAL to an already-surviving entry's score
+   * never displaces it — the earlier-inserted survivor keeps the #3 slot,
+   * matching D-03's own no-tiebreaker philosophy applied to this list's
+   * eviction boundary. Must only ever be called from `enterRoundEnd()`
+   * (never later), since it calls `photoUrlFor(authorId)` while
+   * `photoAssignments` still holds THIS round's draw, before the next
+   * round's `enterWriting()` can overwrite it. Read-only with respect to
+   * round history — never re-derives the list by scanning past rounds.
+   */
+  private updateBestOfNight(): void {
+    this.rotation.forEach((authorId, index) => {
+      const stepRatings = this.ratings.get(index);
+      if (!stepRatings) return;
+      const score = [...stepRatings.values()].reduce((sum, value) => sum + value, 0);
+      this.bestOfNight.push({
+        authorId,
+        authorName: this.players.get(authorId)?.name ?? "",
+        caption: this.submissions.get(authorId) ?? "",
+        photoUrl: this.photoUrlFor(authorId),
+        score,
+      });
+    });
+    this.bestOfNight.sort((a, b) => b.score - a.score);
+    if (this.bestOfNight.length > 3) {
+      this.bestOfNight.length = 3;
+    }
+  }
+
+  /**
    * Writing has closed. Builds this round's rating rotation once, from the
    * submissions map (D-08) — a player who never submitted has no key in that
    * map and is therefore simply absent from the rotation.
@@ -763,6 +807,7 @@ export class Room {
    */
   private enterRoundEnd(): void {
     this.applyRoundScores();
+    this.updateBestOfNight();
     this.phase = "ROUND_END";
     this.schedulePhase(Date.now() + BETWEEN_PHASES_MS, () => {
       if (this.roundIndex < this.settings.rounds) {
@@ -811,6 +856,28 @@ export class Room {
       };
     });
     return { entries };
+  }
+
+  /**
+   * Builds the GAME_END-only view (SCORE-04/D-03, MEME-02/D-04). Computed
+   * fresh every call, never cached. `winners` is every player whose score
+   * equals the room's own max score — never just one on a tie, and never a
+   * tiebreaker of any kind. `bestOfNight` is only READ here, never
+   * recomputed — `updateBestOfNight()` already maintains it incrementally.
+   */
+  private buildGameEndView(): GameEndView {
+    const players = [...this.players.values()];
+    const maxScore = players.reduce((max, p) => Math.max(max, p.score), 0);
+    const winners: PlayerView[] = players
+      .filter((p) => p.score === maxScore)
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        connected: p.connected,
+        isHost: p.id === this.hostId,
+        score: p.score,
+      }));
+    return { winners, bestOfNight: this.bestOfNight };
   }
 
   /**
@@ -912,11 +979,15 @@ export class Room {
       youCanSwapPhoto:
         inWriting && !this.submissions.has(playerId) && !this.swapUsed.has(playerId),
       ratingStep,
-      // T-02-20 — populated only for ROUND_END and GAME_END, so the full
-      // caption/rating set for the round never travels early (D-14's
-      // discipline extended to the round-end reveal).
-      roundEnd:
-        this.phase === "ROUND_END" || this.phase === "GAME_END" ? this.buildRoundEndView() : null,
+      // T-02-20 — `roundEnd` is now ROUND_END-only (plan 04-02 split it from
+      // GAME_END, which gets its own dedicated `gameEnd` view below); the
+      // full caption/rating set for the round still never travels early
+      // (D-14's discipline extended to the round-end reveal).
+      roundEnd: this.phase === "ROUND_END" ? this.buildRoundEndView() : null,
+      // plan 04-02 — GAME_END's own dedicated view: every tied top scorer
+      // (SCORE-04/D-03) and the real top-3 best-of-the-night memes
+      // (MEME-02/D-04).
+      gameEnd: this.phase === "GAME_END" ? this.buildGameEndView() : null,
     };
   }
 

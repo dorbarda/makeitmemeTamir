@@ -78,6 +78,28 @@ export type RoundEndEntry = {
 
 export type RoundEndView = { entries: RoundEndEntry[] };
 
+/**
+ * One meme in the "best of the night" list (MEME-02/D-04). Carries
+ * everything the client needs to render one entry without a second lookup —
+ * `Room.bestOfNight` is the running top-3 this type describes, tracked
+ * incrementally round by round, never recomputed by scanning history.
+ */
+export type BestOfEntry = {
+  authorId: string;
+  authorName: string;
+  caption: string;
+  photoUrl: string;
+  score: number;
+};
+
+/**
+ * The GAME_END-only view (plan 04-02): `winners` is every player tied for
+ * the single highest score, never just one on a tie (SCORE-04/D-03);
+ * `bestOfNight` is the real top-3 highest-scoring memes across the whole
+ * game (MEME-02/D-04).
+ */
+export type GameEndView = { winners: PlayerView[]; bestOfNight: BestOfEntry[] };
+
 export type LobbySnapshot = {
   phase: RoomPhase;
   roomCode: string;
@@ -103,7 +125,8 @@ export type LobbySnapshot = {
   // player has submitted or already used this round's one swap.
   youCanSwapPhoto: boolean;
   ratingStep: RatingStepView | null; // filled by plan 02-04
-  roundEnd: RoundEndView | null; // filled by plan 02-05
+  roundEnd: RoundEndView | null; // filled by plan 02-05 — populated only in ROUND_END (plan 04-02 split this from GAME_END)
+  gameEnd: GameEndView | null; // plan 04-02 — populated only in GAME_END
 };
 
 export type SessionIssued = { token: string; playerId: string };

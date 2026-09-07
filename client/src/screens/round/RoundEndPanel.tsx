@@ -6,16 +6,16 @@ type RoundEndPanelProps = {
 };
 
 /**
- * The round-end and game-end screens (VOTE-04, D-10, SCORE-01/03, VOTE-06).
- * Renders only what `snapshot.roundEnd`/`snapshot.players` say — no
- * summation of any entry's `ratings` array into a score; the server already
- * did that (`Room.buildRoundEndView`), and this component only sorts the
+ * The round-end screen (VOTE-04, D-10, SCORE-01/03, VOTE-06). Renders only
+ * what `snapshot.roundEnd`/`snapshot.players` say — no summation of any
+ * entry's `ratings` array into a score; the server already did that
+ * (`Room.buildRoundEndView`), and this component only sorts the
  * already-computed values for display: `rankedEntries` ranks that round's
  * MEMES by their real `entry.score`, highest first (VOTE-06), while
  * `scoreboard` separately ranks PLAYERS by their accumulated score, a plain
- * list with no per-round delta (D-03). This same component covers both
- * ROUND_END (mid-game) and GAME_END (the final round's results, with no
- * separate winner screen — that is Phase 4's SCORE-04/MEME-02).
+ * list with no per-round delta (D-03). This component now covers ROUND_END
+ * only — the dedicated winner/best-of-the-night screen this doc comment used
+ * to anticipate is `GameEndPanel.tsx` (plan 04-02, SCORE-04/MEME-02).
  */
 export function RoundEndPanel({ snapshot }: RoundEndPanelProps) {
   const roundEnd = snapshot.roundEnd;

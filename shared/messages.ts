@@ -87,4 +87,8 @@ export const HEBREW_UI = {
   // plan 04-01 — photo swap button and real ranked round-results score
   swapPhotoButton: "החלפת תמונה",
   roundResultsPointsSuffix: "נקודות",
+  // plan 04-02 — game-end winner banner and best-of-the-night list
+  winnerHeading: "המנצחים",
+  bestOfNightHeading: "המצחיקים של הערב",
+  bestOfNightEmpty: "עדיין אין מספיק דירוגים כדי לבחור את המצחיקים של הערב",
 };

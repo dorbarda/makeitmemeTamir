@@ -332,3 +332,47 @@ li {
   font-weight: 600;
 }
 
+/* SCORE-04/MEME-02 — the game-end screen (winner banner, scoreboard,
+   best-of-the-night). Mobile-first, no fixed widths, same shape as
+   .round-end-panel. */
+.game-end-panel {
+  margin: 1rem 0;
+}
+
+/* D-03 — visually set apart so a tie's multiple winners read as a
+   celebration, not a plain list item. */
+.winner-banner {
+  margin: 0 0 1.25rem;
+  padding: 0.875rem 1rem;
+  border: 2px solid #1f6feb;
+  border-radius: 0.5rem;
+}
+
+.winner-list {
+  margin: 0.5rem 0 0;
+}
+
+.winner-entry {
+  font-weight: 700;
+  font-size: 1.125rem;
+}
+
+.best-of-night {
+  margin: 1.25rem 0 0;
+}
+
+.best-of-list {
+  margin: 0.5rem 0 0;
+}
+
+.best-of-entry {
+  margin: 0 0 1rem;
+}
+
+/* Matches .writing-progress's "important number" emphasis convention — no
+   letter-spacing on Hebrew text. */
+.best-of-meta {
+  font-weight: 600;
+  word-spacing: 0.1em;
+}
+
