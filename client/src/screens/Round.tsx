@@ -32,7 +32,17 @@ const PHASE_HEADINGS: Record<Exclude<RoomPhase, "LOBBY">, string> = {
  * countdown are shown. The countdown already renders nothing once
  * `deadlineAt` is null, so `GAME_END`'s terminal, timer-less state needs no
  * extra branch here.
+ *
+ * The baseline roster below only mounts for phases where no panel already
+ * lists every player: `WritingPanel` shows the same names with a submission
+ * checkmark, and `RoundEndPanel` shows them ranked with their score — this
+ * screen showing a third, plainer copy of the same list read as a visible
+ * duplicate bug (reported during the Phase 3 real-phone playtest). `RATING`
+ * and `REVEAL_BREAK` have no player list of their own, so it still mounts
+ * there.
  */
+const PANEL_ALREADY_LISTS_PLAYERS: ReadonlySet<RoomPhase> = new Set(["WRITING", "ROUND_END", "GAME_END"]);
+
 export function Round({ snapshot }: RoundProps) {
   const heading = snapshot.phase === "LOBBY" ? "" : PHASE_HEADINGS[snapshot.phase];
 
@@ -53,14 +63,16 @@ export function Round({ snapshot }: RoundProps) {
         <RoundEndPanel snapshot={snapshot} />
       )}
 
-      <ul>
-        {snapshot.players.map((player) => (
-          <li key={player.id} className={player.connected ? undefined : "player--disconnected"}>
-            {player.name}
-            {!player.connected && ` ${HEBREW_UI.disconnectedTag}`}
-          </li>
-        ))}
-      </ul>
+      {!PANEL_ALREADY_LISTS_PLAYERS.has(snapshot.phase) && (
+        <ul>
+          {snapshot.players.map((player) => (
+            <li key={player.id} className={player.connected ? undefined : "player--disconnected"}>
+              {player.name}
+              {!player.connected && ` ${HEBREW_UI.disconnectedTag}`}
+            </li>
+          ))}
+        </ul>
+      )}
     </main>
   );
 }
