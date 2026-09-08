@@ -1,19 +1,19 @@
 ---
 gsd_state_version: 1.0
-current_phase: 06
-current_phase_name: Host Controls & RTL Interface Hardening
-status: executing
-stopped_at: Phase 6 UI-SPEC approved (host controls panel + remove-player selection flow + RTL audit checklist); ready for /gsd-plan-phase 6
-last_updated: "2026-09-07T17:34:10.603Z"
-last_activity: 2026-09-07
-last_activity_desc: Phase 06 execution started
+current_phase: 07
+current_phase_name: Deployment & Hosting
+status: not_started
+stopped_at: Phase 6 complete (all 3 plans, real-device checkpoint confirmed by user); ready for /gsd-discuss-phase 7
+last_updated: "2026-09-08T00:00:00.000Z"
+last_activity: 2026-09-08
+last_activity_desc: Phase 06 completed (server host actions, client Host Controls panel, RTL audit + Hebrew keyboard real-device checkpoint confirmed)
 state_head: 0c64d25f21239aa457e12001aaa4767b5270d475
 progress:
   total_phases: 9
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 20
-  completed_plans: 17
-  percent: 56
+  completed_plans: 20
+  percent: 67
 ---
 
 # Project State
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-09-05)
 
 **Core value:** Ten-plus friends in the same room can all join on their phones and play a full game of write-a-caption-and-vote in Hebrew without anyone getting stuck, disconnected, or confused.
-**Current focus:** Phase 06 — Host Controls & RTL Interface Hardening
+**Current focus:** Phase 07 — Deployment & Hosting
 
 ## Current Position
 
-Phase: 06 (Host Controls & RTL Interface Hardening) — EXECUTING
-Plan: 1 of 3
-Status: Executing Phase 06
-Last activity: 2026-09-07 — Phase 06 execution started
+Phase: 07 (Deployment & Hosting) — NOT STARTED
+Plan: -
+Status: Phase 6 complete, ready to start Phase 7
+Last activity: 2026-09-08 — Phase 06 completed (real-device checkpoint confirmed by user)
 
-Progress: [██████░░░░] 56%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
