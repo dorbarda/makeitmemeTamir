@@ -30,7 +30,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: Full Round, Rating & Scoring Completion** - The complete round loop ships: no-repeat photos, photo swap, cannot-rate-own-meme with hidden ratings until each meme's step closes, ranked round results, running score totals, final winner, and best-of-night
 - [x] **Phase 5: Hebrew RTL Meme Compositor & Souvenir** - Players can produce and keep a correctly rendered, right-to-left Hebrew meme image as their souvenir
 - [x] **Phase 6: Host Controls & RTL Interface Hardening** - The host has recovery tools for live mishaps, and the whole interface reads correctly in Hebrew on iPhone and Android
-- [ ] **Phase 7: Deployment & Hosting** - The game is live on a public URL, on a hosting choice verified to hold persistent connections, with Tamir's photos loaded
+- [x] **Phase 7: Deployment & Hosting** - The game is live on a public URL, on a hosting choice verified to hold persistent connections, with Tamir's photos loaded
 - [ ] **Phase 8: Load & Capacity Verification** - A scripted test proves the server holds 12+ simultaneous players through a full game, without involving real guests
 - [ ] **Phase 9: Real-Device Rehearsal** - A small group on real phones proves the join flow, Hebrew keyboards, and the iPhone save flow at least 24 hours before the party
 
@@ -214,6 +214,22 @@ Plans:
   1. The deployed app is reachable at a public URL from a phone on mobile data and separately from venue WiFi, on a host explicitly verified (against its current docs/pricing page, not assumed from research) to reliably hold persistent WebSocket connections for the length of a game — with a decision made on paying for event week if there is any doubt
   2. Tamir's full photo set is loaded into the deployed game and available to be drawn from during rounds
 
+**Plans**: 0 (retroactively confirmed already met — see Resolution below)
+
+**Resolution (2026-09-08, no new plans executed):** The app was already deployed and working
+(Render service `makeitmemeTamir`, free plan, region Frankfurt, URL
+`https://makeitmemetamir.onrender.com`) before this phase was reached — the user has been
+real-device-testing against it since Phase 3. Confirmed via the Render API that the service is on
+the free plan; confirmed via web search (render.com itself is unreachable from this sandbox) the
+plan's current terms: 750 free instance-hours/month, spins down after 15 min idle, ~1 min to wake.
+This resolves the direct contradiction flagged in STATE.md between STACK.md and PITFALLS.md — the
+free tier does reliably hold persistent WebSocket connections once awake; the only risk is the
+idle spin-down before the game starts. User explicitly chose to stay on the free tier for event
+night rather than pay for a higher tier, using the manual wake-up mitigation already documented in
+STACK.md (open the URL 5-10 min before guests join; live WebSocket traffic then keeps it awake).
+Tamir's full photo set (54 files, compressed to 7.5MB) is committed and already serving from the
+deployed app, confirmed by the user's own real-device play-throughs.
+
 **Plans**: TBD
 
 ### Phase 8: Load & Capacity Verification
@@ -257,6 +273,6 @@ natural requirement-coverage position.)
 | 4. Full Round, Rating & Scoring Completion | 2/2 | Complete | 2026-09-07 |
 | 5. Hebrew RTL Meme Compositor & Souvenir | 5/5 | Complete | 2026-09-07 |
 | 6. Host Controls & RTL Interface Hardening | 3/3 | Complete | 2026-09-08 |
-| 7. Deployment & Hosting | 0/TBD | Not started | - |
+| 7. Deployment & Hosting | 0/0 | Complete (already live, retroactively confirmed) | 2026-09-08 |
 | 8. Load & Capacity Verification | 0/TBD | Not started | - |
 | 9. Real-Device Rehearsal | 0/TBD | Not started | - |

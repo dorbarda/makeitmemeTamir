@@ -1,19 +1,19 @@
 ---
 gsd_state_version: 1.0
-current_phase: 07
-current_phase_name: Deployment & Hosting
+current_phase: 08
+current_phase_name: Load & Capacity Verification
 status: not_started
-stopped_at: Phase 6 complete (all 3 plans, real-device checkpoint confirmed by user); ready for /gsd-discuss-phase 7
-last_updated: "2026-09-08T00:00:00.000Z"
+stopped_at: Phase 7 retroactively confirmed complete (already deployed + working, Render free-tier terms verified); ready for /gsd-discuss-phase 8
+last_updated: "2026-09-08T00:10:00.000Z"
 last_activity: 2026-09-08
-last_activity_desc: Phase 06 completed (server host actions, client Host Controls panel, RTL audit + Hebrew keyboard real-device checkpoint confirmed)
+last_activity_desc: Phase 07 closed retroactively — Render free-tier plan/terms verified via API + web search, user chose to stay free tier with manual wake-up mitigation
 state_head: 0c64d25f21239aa457e12001aaa4767b5270d475
 progress:
   total_phases: 9
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 20
   completed_plans: 20
-  percent: 67
+  percent: 78
 ---
 
 # Project State
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-09-05)
 
 **Core value:** Ten-plus friends in the same room can all join on their phones and play a full game of write-a-caption-and-vote in Hebrew without anyone getting stuck, disconnected, or confused.
-**Current focus:** Phase 07 — Deployment & Hosting
+**Current focus:** Phase 08 — Load & Capacity Verification
 
 ## Current Position
 
-Phase: 07 (Deployment & Hosting) — NOT STARTED
+Phase: 08 (Load & Capacity Verification) — NOT STARTED
 Plan: -
-Status: Phase 6 complete, ready to start Phase 7
-Last activity: 2026-09-08 — Phase 06 completed (real-device checkpoint confirmed by user)
+Status: Phase 7 retroactively closed, ready to start Phase 8
+Last activity: 2026-09-08 — Phase 07 closed (deployment already live; Render free-tier terms verified)
 
-Progress: [███████░░░] 67%
+Progress: [████████░░] 78%
 
 ## Performance Metrics
 
@@ -90,10 +90,13 @@ Recent decisions affecting current work:
 
 ### Blockers/Concerns
 
-- **OPEN DECISION (Phase 7):** STACK.md and PITFALLS.md directly contradict each other on
-  whether Render's free tier reliably supports persistent WebSocket connections. Must be
-  verified against the host's current live pricing/docs page before Phase 7 executes, with a
-  bias toward paying a small amount for event week if there's any doubt.
+- **RESOLVED (Phase 7):** Render's free tier does support persistent WebSocket connections
+  (confirmed working — the deployed app has already run full real-device games). Confirmed via
+  Render API the service is on the free plan; confirmed via web search (render.com itself is
+  blocked from this sandbox) the current terms: 750 free instance-hours/month, spins down after
+  15 min idle, ~1 min to wake. User explicitly chose to stay on the free tier for event night,
+  using the manual wake-up mitigation (open the URL 5-10 min before guests join; live WebSocket
+  traffic then keeps it awake) rather than paying for a higher tier.
 - **RESOLVED (Phase 5):** iOS Safari save/share flow for the composited meme was confirmed working
   on a real phone by the user (2026-09-07) — no longer an open risk.
 - Party date is fixed and cannot move — one week total. Reliability outranks features/polish
