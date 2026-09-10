@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { Room } from "../src/rooms/Room.js";
-import { WRITING_COLLAPSE_MS } from "../src/config.js";
+import { DISCONNECT_QUORUM_GRACE_MS, WRITING_COLLAPSE_MS } from "../src/config.js";
 import { fakeMeme } from "./fixtures/meme.js";
 
 // Bare-Room + vi.useFakeTimers(), following the rosterFade/hostTransfer
@@ -122,10 +122,15 @@ describe("writing phase — deadline holds regardless of submissions, progress b
     expect(room.phase).not.toBe("WRITING");
   });
 
-  it("does not let a detached non-submitter block the early-finish collapse", () => {
+  it("does not let a long-detached non-submitter block the early-finish collapse once their quorum grace has expired", () => {
     const players = startWithPlayers(5);
-    // Never submits and never returns — must not hold up the other four.
+    // Never submits and never returns — once their grace window has aged
+    // out, must not hold up the other four (bug: writing-phase-ends-early —
+    // this is the LIVE-03 guarantee the grace window still preserves, just
+    // not at the instant of disconnect; see the new "recently-detached"
+    // test below for the bug this grace window actually fixes).
     room.detach(players[4].id);
+    vi.advanceTimersByTime(DISCONNECT_QUORUM_GRACE_MS);
 
     room.submitCaption(players[0].id, fakeMeme("a"));
     room.submitCaption(players[1].id, fakeMeme("b"));
@@ -134,6 +139,50 @@ describe("writing phase — deadline holds regardless of submissions, progress b
 
     const now = Date.now();
     room.submitCaption(players[3].id, fakeMeme("d")); // the last CONNECTED player
+    expect(room.deadlineAt).toBe(now + WRITING_COLLAPSE_MS);
+
+    vi.advanceTimersByTime(WRITING_COLLAPSE_MS);
+    expect(room.phase).not.toBe("WRITING");
+  });
+
+  it("a just-now-detached non-submitter (a phone lock/backgrounding blip) DOES block the early-finish collapse within their quorum grace window (bug: writing-phase-ends-early)", () => {
+    const players = startWithPlayers(5);
+    // Simulates a real-phone screen lock between rounds: the socket
+    // transport closes and `detach()` fires immediately, well before this
+    // player has actually left. The other four finishing right away must
+    // not collapse the round out from under them.
+    room.detach(players[4].id);
+
+    room.submitCaption(players[0].id, fakeMeme("a"));
+    room.submitCaption(players[1].id, fakeMeme("b"));
+    room.submitCaption(players[2].id, fakeMeme("c"));
+    room.submitCaption(players[3].id, fakeMeme("d")); // every actively-connected player
+
+    // Unlike the fully-departed case above, the deadline must NOT collapse
+    // to WRITING_COLLAPSE_MS — the round keeps running its full original
+    // duration so the backgrounded player still has real time to return.
+    const fullDeadlineMs = room.settings.writingSeconds * 1000;
+    vi.advanceTimersByTime(fullDeadlineMs - 1);
+    expect(room.phase).toBe("WRITING");
+    vi.advanceTimersByTime(1);
+    expect(room.phase).not.toBe("WRITING");
+  });
+
+  it("a backgrounded player who reconnects and submits within their quorum grace window still collapses the deadline once everyone is truly done", () => {
+    const players = startWithPlayers(5);
+    room.detach(players[4].id);
+    room.submitCaption(players[0].id, fakeMeme("a"));
+    room.submitCaption(players[1].id, fakeMeme("b"));
+    room.submitCaption(players[2].id, fakeMeme("c"));
+    room.submitCaption(players[3].id, fakeMeme("d"));
+    expect(room.phase).toBe("WRITING"); // still waiting on the backgrounded player
+
+    // The phone unlocks and resyncs well within the grace window, then
+    // submits — now everyone still present has genuinely finished.
+    vi.advanceTimersByTime(2_000);
+    room.attach(players[4].id);
+    const now = Date.now();
+    room.submitCaption(players[4].id, fakeMeme("e"));
     expect(room.deadlineAt).toBe(now + WRITING_COLLAPSE_MS);
 
     vi.advanceTimersByTime(WRITING_COLLAPSE_MS);

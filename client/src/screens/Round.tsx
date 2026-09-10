@@ -50,9 +50,10 @@ const PANEL_ALREADY_LISTS_PLAYERS: ReadonlySet<RoomPhase> = new Set(["WRITING", 
 
 export function Round({ snapshot }: RoundProps) {
   const heading = snapshot.phase === "LOBBY" ? "" : PHASE_HEADINGS[snapshot.phase];
+  const isGameEnd = snapshot.phase === "GAME_END";
 
   return (
-    <main>
+    <main className={isGameEnd ? "hero-bg" : undefined}>
       <Countdown deadlineAt={snapshot.deadlineAt} serverNow={snapshot.serverNow} />
       <h1>{heading}</h1>
 

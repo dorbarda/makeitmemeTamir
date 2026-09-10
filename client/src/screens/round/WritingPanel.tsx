@@ -286,6 +286,7 @@ export function WritingPanel({ snapshot }: WritingPanelProps) {
           {canAddBox(boxes.length) && (
             <button
               type="button"
+              className="caption-box-add"
               onClick={() =>
                 setBoxes([
                   ...boxes,
@@ -293,6 +294,7 @@ export function WritingPanel({ snapshot }: WritingPanelProps) {
                 ])
               }
             >
+              <span aria-hidden="true">+ </span>
               {HEBREW_UI.addCaptionBoxButton}
             </button>
           )}

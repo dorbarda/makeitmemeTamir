@@ -4,9 +4,9 @@ current_phase: 08
 current_phase_name: Load & Capacity Verification
 status: not_started
 stopped_at: Phase 8 context gathered (load test runs locally in-sandbox, 12 players/1 round); ready for /gsd-plan-phase 8
-last_updated: "2026-09-08T00:20:00.000Z"
-last_activity: 2026-09-08
-last_activity_desc: Phase 08 context captured — load test target and scale decided
+last_updated: "2026-09-10T06:53:45.000Z"
+last_activity: 2026-09-10
+last_activity_desc: Completed quick task 260910-9ks: auto-sized caption box, add-box affordance, DVD-bounce lobby animation
 state_head: 0c64d25f21239aa457e12001aaa4767b5270d475
 progress:
   total_phases: 9
@@ -108,6 +108,8 @@ Recent decisions affecting current work:
 |---|-------------|------|--------|-----------|
 | 260907-mtn | Fix photoUrl() in server/src/rooms/photos.ts to URL-encode the filename before building the /tamir-photos/ path | 2026-09-07 | cfa8f55 | [260907-mtn-fix-photourl-in-server-src-rooms-photos-](./quick/260907-mtn-fix-photourl-in-server-src-rooms-photos-/) |
 | 260907-mzz | Compress the real Tamir photos in client/public/tamir-photos to reduce mobile load time (42.99MB -> 7.74MB, 82% reduction) | 2026-09-07 | 5e47c75 | [260907-mzz-compress-the-real-tamir-photos-in-client](./quick/260907-mzz-compress-the-real-tamir-photos-in-client/) |
+| 260910-8yz | Apply make-it-meme-style visual overhaul: bold chunky fonts, gradient sunburst backgrounds, card-style buttons; move client/public/tamir-photos/main-photo.jpeg to a dedicated assets location and reuse as hero background across landing/lobby/end-game screens; keep Hebrew RTL intact | 2026-09-10 | 635b796 | [260910-8yz-apply-make-it-meme-style-visual-overhaul](./quick/260910-8yz-apply-make-it-meme-style-visual-overhaul/) |
+| 260910-9ks | Three visual/UX fixes: auto-size + round the caption box in the canvas compositor; add a clear add-box affordance to the manual multi-box caption editor; add a DVD-screensaver-style bouncing Tamir image (client/public/branding/dvd-bounce.jpeg) to the waiting lobby screen | 2026-09-10 | e8e718d | [260910-9ks-three-visual-ux-fixes-1-auto-size-round-](./quick/260910-9ks-three-visual-ux-fixes-1-auto-size-round-/) |
 
 ## Deferred Items
 
