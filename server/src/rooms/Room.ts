@@ -446,22 +446,18 @@ export class Room {
 
   /**
    * True while `playerId` should still count toward the "is everyone done"
-   * quorum `maybeCollapseWriting` waits on: connected outright, or
-   * disconnected so recently (within `DISCONNECT_QUORUM_GRACE_MS` of
-   * `detach()`) that a real-phone screen lock/backgrounding blip cannot yet
-   * be told apart from a genuine departure (bug: writing-phase-ends-early —
-   * a live 3-player test showed round 2/3 writing phases collapsing in 5-10s
-   * because a player's phone locking between rounds instantly zeroed them
-   * out of this quorum). Once a disconnect ages past the grace window with
-   * no reconnect, this returns false and LIVE-03 holds exactly as before: a
+   * quorum `maybeCollapseWriting` and `maybeCollapseRating` each wait on:
+   * connected outright, or disconnected so recently (within
+   * `DISCONNECT_QUORUM_GRACE_MS` of `detach()`) that a real-phone screen
+   * lock/backgrounding blip cannot yet be told apart from a genuine
+   * departure (bug: writing-phase-ends-early — a live 3-player test showed
+   * round 2/3 writing phases collapsing in 5-10s because a player's phone
+   * locking between rounds instantly zeroed them out of this quorum; the
+   * identical shape reproduced in the RATING phase's own quorum as a
+   * fast-follow — bug: rating-phase-collapses-early — over an even shorter
+   * 8-15s deadline). Once a disconnect ages past the grace window with no
+   * reconnect, this returns false and LIVE-03 holds exactly as before: a
    * player who has truly left can never hold the early finish hostage.
-   *
-   * `maybeCollapseRating`'s own quorum (`eligibleRaters` in rotation.ts) has
-   * the exact same instant-`connected`-flip shape and is very likely exposed
-   * to the identical bug (a phone locking mid-RATING would zero a rater out
-   * just as fast, over an even shorter deadline) — deliberately left
-   * unchanged here since it was never part of what this session reproduced
-   * or confirmed; flagged as a fast-follow rather than fixed blind.
    */
   private isPendingForQuorum(playerId: string): boolean {
     const player = this.players.get(playerId);
@@ -874,18 +870,35 @@ export class Room {
   }
 
   /**
-   * If every eligible rater for the current step has now rated it, collapses
-   * the step's deadline to `RATING_COLLAPSE_MS` from now instead of leaving
-   * the room to sit out the rest of the original deadline (D-07). Reuses
-   * `collapseDeadline`, the single chokepoint through which any live
-   * deadline may ever be shortened, so "never extends" holds here for free.
+   * If every rater still pending on this step (§isPendingForQuorum — either
+   * connected, or too-recently-disconnected to count as gone yet) has now
+   * rated it, collapses the step's deadline to `RATING_COLLAPSE_MS` from now
+   * instead of leaving the room to sit out the rest of the original deadline
+   * (D-07). Mirrors `maybeCollapseWriting` (bug: rating-phase-collapses-early,
+   * the RATING-phase sibling of writing-phase-ends-early) — a rater whose
+   * phone locks/backgrounds an instant before the others submit is no longer
+   * silently dropped from the quorum, so the round no longer collapses to
+   * `RATING_COLLAPSE_MS` out from under someone still genuinely present.
+   * `eligible.length === 0` still short-circuits exactly as before (no
+   * currently-connected non-author rater exists at all, e.g. everyone else
+   * has been disconnected for a while) — `eligibleRaters()` itself is left on
+   * its raw `connected` definition since it also feeds `eligibleAtClose` and
+   * the player-facing snapshot (`ratingStep.eligibleCount`), which must both
+   * reflect who is truly connected right now, not who is still within a
+   * grace window. Reuses `collapseDeadline`, the single chokepoint through
+   * which any live deadline may ever be shortened, so "never extends" holds
+   * here for free.
    */
   private maybeCollapseRating(): void {
     const authorId = this.rotation[this.stepIndex];
     const eligible = eligibleRaters(this.players, authorId);
+    if (eligible.length === 0) return;
+
     const stepRatings = this.ratings.get(this.stepIndex);
-    const allRated = eligible.length > 0 && eligible.every((id) => stepRatings?.has(id));
-    if (allRated) {
+    const stillPending = [...this.players.keys()].some(
+      (id) => id !== authorId && !stepRatings?.has(id) && this.isPendingForQuorum(id),
+    );
+    if (!stillPending) {
       this.collapseDeadline(RATING_COLLAPSE_MS, () => this.closeRatingStep());
     }
   }

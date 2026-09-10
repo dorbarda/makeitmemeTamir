@@ -121,13 +121,31 @@ describe("LIVE-03 — no phase can be held open by a player who left, disconnect
     expect(room.phase).not.toBe("WRITING");
   });
 
-  it("a player detaching during a RATING step before rating does not block the remaining eligible raters from collapsing the step early", () => {
-    const players = reachRatingStep0(4);
-    const authorId = room.rotation[room.stepIndex];
-    const eligible = players.filter((p) => p.id !== authorId);
-    const [departing, ...remaining] = eligible;
+  it("a rater detached long enough ago (back during an earlier phase) to be past their quorum grace does not block the remaining eligible raters from collapsing the step early", () => {
+    // DISCONNECT_QUORUM_GRACE_MS (18s) outlasts every ratingSeconds preset
+    // (8/10/15s) — a rater who detaches only after the current RATING step
+    // has already opened can therefore never age past grace before the step
+    // itself naturally closes (see the "moments ago... still blocks" test
+    // below). To exercise the past-grace side at all, the detach has to
+    // happen earlier, back during WRITING, so enough real time elapses
+    // (writingSeconds default 60s + BETWEEN_PHASES_MS getting to RATING)
+    // for the grace window to have already expired by the time this step
+    // is reached — a rater genuinely gone by then, not a mid-step blip.
+    const players = startWithPlayers(4);
+    room.detach(players[3].id);
 
-    room.detach(departing.id);
+    room.submitCaption(players[0].id, fakeMeme("p0"));
+    room.submitCaption(players[1].id, fakeMeme("p1"));
+    // players[2] deliberately never submits, so WRITING's own early-finish
+    // collapse never fires here (mirrors reachRatingStep0's own shape).
+
+    vi.advanceTimersByTime(room.settings.writingSeconds * 1000);
+    expect(room.phase).toBe("REVEAL_BREAK");
+    vi.advanceTimersByTime(BETWEEN_PHASES_MS);
+    expect(room.phase).toBe("RATING");
+
+    const authorId = room.rotation[room.stepIndex]; // players[0], the first submitter
+    const remaining = players.filter((p) => p.id !== authorId && p.id !== players[3].id);
 
     for (const p of remaining.slice(0, -1)) {
       room.submitRating(p.id, room.stepIndex, 2);
@@ -136,9 +154,62 @@ describe("LIVE-03 — no phase can be held open by a player who left, disconnect
 
     const now = Date.now();
     room.submitRating(remaining[remaining.length - 1].id, room.stepIndex, 3);
-    // The departed rater was never counted among the eligible raters the
-    // step waits on — the remaining ones finishing is enough to collapse it.
+    // players[3], gone long enough ago, was never counted among the raters
+    // this step waits on — the remaining ones finishing is enough to
+    // collapse it.
     expect(room.deadlineAt).toBe(now + RATING_COLLAPSE_MS);
+  });
+
+  it("a rater detaching during RATING moments ago (a phone lock/backgrounding blip) still blocks the early-finish collapse within their quorum grace window (bug: rating-phase-collapses-early)", () => {
+    const players = reachRatingStep0(4);
+    const authorId = room.rotation[room.stepIndex];
+    const eligible = players.filter((p) => p.id !== authorId);
+    const [departing, ...remaining] = eligible;
+
+    // Simulates a real-phone screen lock during RATING: the socket transport
+    // closes and `detach()` fires immediately, well before this rater has
+    // actually left. The remaining raters submitting right away must not
+    // collapse the step out from under them, especially with only 8-15s to
+    // begin with.
+    room.detach(departing.id);
+
+    for (const p of remaining) {
+      room.submitRating(p.id, room.stepIndex, 2);
+    }
+
+    // No collapse yet — the departing rater's disconnect is still within
+    // their grace window, so the step runs its full original duration
+    // instead of assuming they have left.
+    expect(room.phase).toBe("RATING");
+    const fullDeadlineMs = room.settings.ratingSeconds * 1000;
+    vi.advanceTimersByTime(fullDeadlineMs - 1);
+    expect(room.phase).toBe("RATING");
+    vi.advanceTimersByTime(1);
+    expect(room.phase).not.toBe("RATING");
+  });
+
+  it("a backgrounded rater who reconnects and rates within their quorum grace window still collapses the step once everyone is truly done", () => {
+    const players = reachRatingStep0(4);
+    const authorId = room.rotation[room.stepIndex];
+    const eligible = players.filter((p) => p.id !== authorId);
+    const [departing, ...remaining] = eligible;
+
+    room.detach(departing.id);
+    for (const p of remaining) {
+      room.submitRating(p.id, room.stepIndex, 2);
+    }
+    expect(room.phase).toBe("RATING"); // still waiting on the backgrounded rater
+
+    // The phone unlocks and resyncs well within the grace window, then
+    // rates — now everyone still present has genuinely finished.
+    vi.advanceTimersByTime(2_000);
+    room.attach(departing.id);
+    const now = Date.now();
+    room.submitRating(departing.id, room.stepIndex, 3);
+    expect(room.deadlineAt).toBe(now + RATING_COLLAPSE_MS);
+
+    vi.advanceTimersByTime(RATING_COLLAPSE_MS);
+    expect(room.phase).not.toBe("RATING");
   });
 
   it("every eligible rater for a step detaching leaves the step to close on its own deadline with an empty ratings array — no value is invented", () => {
