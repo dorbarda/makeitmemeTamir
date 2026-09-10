@@ -18,6 +18,7 @@ import {
 import {
   BETWEEN_MEMES_MS,
   BETWEEN_PHASES_MS,
+  DISCONNECT_QUORUM_GRACE_MS,
   HOST_TRANSFER_GRACE_MS,
   MEME_MAX_BASE64_CHARS,
   MIN_PLAYERS_TO_START,
@@ -192,6 +193,12 @@ export class Room {
   onStateChanged?: () => void;
 
   private fadeTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  /** playerId -> the epoch-ms timestamp `detach()` most recently recorded a
+   * disconnect at; deleted by `attach()`. Read only by `isPendingForQuorum`
+   * (bug fix: writing-phase-ends-early) to tell a just-now transport blip
+   * apart from a player who has been gone long enough to no longer count
+   * toward the writing/rating early-finish quorum. */
+  private disconnectedAt = new Map<string, number>();
   private hostTransferTimer: ReturnType<typeof setTimeout> | null = null;
   /** The single round-clock timer primitive — only one phase is ever "live"
    * at a time, so unlike `fadeTimers` this needs no map. Follows the exact
@@ -295,6 +302,7 @@ export class Room {
     if (!player) return;
 
     player.connected = true;
+    this.disconnectedAt.delete(playerId);
     this.clearFadeTimer(playerId);
     if (playerId === this.hostId) {
       this.clearHostTransferTimer();
@@ -317,6 +325,7 @@ export class Room {
     if (!player) return;
 
     player.connected = false;
+    this.disconnectedAt.set(playerId, Date.now());
 
     if (this.phase === "LOBBY") {
       this.scheduleFade(playerId);
@@ -332,6 +341,7 @@ export class Room {
     const timer = setTimeout(() => {
       this.fadeTimers.delete(playerId);
       this.players.delete(playerId);
+      this.disconnectedAt.delete(playerId);
       this.onStateChanged?.();
     }, ROSTER_FADE_GRACE_MS);
     this.fadeTimers.set(playerId, timer);
@@ -435,19 +445,51 @@ export class Room {
   }
 
   /**
-   * If every currently connected player has submitted a caption this round,
-   * collapses the writing deadline to `WRITING_COLLAPSE_MS` from now instead
-   * of leaving the room to sit out the rest of the original deadline
-   * (D-07). Deliberately keyed on connected players only (Phase 1 D-17,
-   * LIVE-03): a player who has left must never be able to hold the early
-   * finish hostage. Because collapse only shortens, a disconnected player
-   * who reconnects in time can still submit against the unchanged deadline.
+   * True while `playerId` should still count toward the "is everyone done"
+   * quorum `maybeCollapseWriting` waits on: connected outright, or
+   * disconnected so recently (within `DISCONNECT_QUORUM_GRACE_MS` of
+   * `detach()`) that a real-phone screen lock/backgrounding blip cannot yet
+   * be told apart from a genuine departure (bug: writing-phase-ends-early —
+   * a live 3-player test showed round 2/3 writing phases collapsing in 5-10s
+   * because a player's phone locking between rounds instantly zeroed them
+   * out of this quorum). Once a disconnect ages past the grace window with
+   * no reconnect, this returns false and LIVE-03 holds exactly as before: a
+   * player who has truly left can never hold the early finish hostage.
+   *
+   * `maybeCollapseRating`'s own quorum (`eligibleRaters` in rotation.ts) has
+   * the exact same instant-`connected`-flip shape and is very likely exposed
+   * to the identical bug (a phone locking mid-RATING would zero a rater out
+   * just as fast, over an even shorter deadline) — deliberately left
+   * unchanged here since it was never part of what this session reproduced
+   * or confirmed; flagged as a fast-follow rather than fixed blind.
+   */
+  private isPendingForQuorum(playerId: string): boolean {
+    const player = this.players.get(playerId);
+    if (!player) return false;
+    if (player.connected) return true;
+    const since = this.disconnectedAt.get(playerId);
+    return since !== undefined && Date.now() - since < DISCONNECT_QUORUM_GRACE_MS;
+  }
+
+  /**
+   * If every player still pending on this round (§isPendingForQuorum — either
+   * connected, or too-recently-disconnected to count as gone yet) has
+   * submitted a caption, collapses the writing deadline to
+   * `WRITING_COLLAPSE_MS` from now instead of leaving the room to sit out the
+   * rest of the original deadline (D-07). Because collapse only shortens, a
+   * disconnected player who reconnects in time can still submit against the
+   * unchanged (or already-collapsed) deadline; a player still within their
+   * grace window simply leaves the round to run its normal full course
+   * instead of forcing a premature collapse — never a stall, since the
+   * phase's own deadline timer is the unconditional backstop either way.
    */
   private maybeCollapseWriting(): void {
-    const connectedPlayers = [...this.players.values()].filter((p) => p.connected);
-    if (connectedPlayers.length === 0) return;
-    const allSubmitted = connectedPlayers.every((p) => this.submissions.has(p.id));
-    if (allSubmitted) {
+    const anyoneConnected = [...this.players.values()].some((p) => p.connected);
+    if (!anyoneConnected) return;
+    const stillPending = [...this.players.keys()].some(
+      (id) => !this.submissions.has(id) && this.isPendingForQuorum(id),
+    );
+    if (!stillPending) {
       this.collapseDeadline(WRITING_COLLAPSE_MS, () => this.closeWriting());
     }
   }

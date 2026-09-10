@@ -3,6 +3,7 @@ import { Room } from "../src/rooms/Room.js";
 import {
   BETWEEN_MEMES_MS,
   BETWEEN_PHASES_MS,
+  DISCONNECT_QUORUM_GRACE_MS,
   HOST_TRANSFER_GRACE_MS,
   RATING_COLLAPSE_MS,
   ROSTER_FADE_GRACE_MS,
@@ -80,9 +81,15 @@ describe("LIVE-03 — no phase can be held open by a player who left, disconnect
     expect(room.phase).not.toBe("WRITING");
   });
 
-  it("a player detaching during WRITING before submitting is excluded from the early-finish expectation — the remaining connected players submitting still collapses the deadline", () => {
+  it("a player detached long enough ago to be past their quorum grace is excluded from the early-finish expectation — the remaining connected players submitting still collapses the deadline", () => {
     const players = startWithPlayers(4);
     room.detach(players[3].id); // departs before ever submitting
+    // Bug fix (writing-phase-ends-early): a fresh disconnect no longer
+    // drops a player out of the quorum instantly — a real phone locking its
+    // screen looks identical to this at t=0. Aging the disconnect past
+    // DISCONNECT_QUORUM_GRACE_MS is what tells "genuinely left" apart from
+    // "briefly backgrounded" here.
+    vi.advanceTimersByTime(DISCONNECT_QUORUM_GRACE_MS);
 
     room.submitCaption(players[0].id, fakeMeme("a"));
     room.submitCaption(players[1].id, fakeMeme("b"));
@@ -91,8 +98,27 @@ describe("LIVE-03 — no phase can be held open by a player who left, disconnect
     const now = Date.now();
     room.submitCaption(players[2].id, fakeMeme("c"));
     // Every CONNECTED player (0,1,2) has now submitted — players[3] having
-    // left is never counted among those the room is waiting on.
+    // left long enough ago is never counted among those the room is waiting on.
     expect(room.deadlineAt).toBe(now + WRITING_COLLAPSE_MS);
+  });
+
+  it("a player detaching during WRITING moments ago (a phone lock/backgrounding blip) still blocks the early-finish collapse — the remaining connected players submitting must not cut the round short (bug: writing-phase-ends-early)", () => {
+    const players = startWithPlayers(4);
+    room.detach(players[3].id); // could be gone for good, or could just be a locked screen
+
+    room.submitCaption(players[0].id, fakeMeme("a"));
+    room.submitCaption(players[1].id, fakeMeme("b"));
+    room.submitCaption(players[2].id, fakeMeme("c")); // every actively-connected player
+
+    // No collapse yet — players[3]'s disconnect is still within their grace
+    // window, so the round runs its full course instead of assuming they
+    // have left.
+    expect(room.phase).toBe("WRITING");
+    const fullDeadlineMs = room.settings.writingSeconds * 1000;
+    vi.advanceTimersByTime(fullDeadlineMs - 1);
+    expect(room.phase).toBe("WRITING");
+    vi.advanceTimersByTime(1);
+    expect(room.phase).not.toBe("WRITING");
   });
 
   it("a player detaching during a RATING step before rating does not block the remaining eligible raters from collapsing the step early", () => {
