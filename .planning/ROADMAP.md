@@ -242,12 +242,12 @@ deployed app, confirmed by the user's own real-device play-throughs.
   1. A simulated test using 12+ scripted or browser-tab clients (not real guests) completes a full game against the deployed server without crashing, hanging, or requiring a restart
   2. During that test, 12+ simultaneous players can submit captions and ratings within the same round with no submission lost and no noticeable slowdown
 
-**Plans**: 1 plan
+**Plans**: 1/1 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 08-01-PLAN.md — Tracer (3 players, 1 round) plus the real capacity proof (12 concurrent players, 3 rounds, latency + no-loss assertions, no-restart sanity check) against a locally started server (D-01/D-02)
+- [x] 08-01-PLAN.md — Tracer (3 players, 1 round) plus the real capacity proof (12 concurrent players, 3 rounds, latency + no-loss assertions, no-restart sanity check) against a locally started server (D-01/D-02)
 
 ### Phase 9: Real-Device Rehearsal
 
@@ -279,5 +279,5 @@ natural requirement-coverage position.)
 | 5. Hebrew RTL Meme Compositor & Souvenir | 5/5 | Complete | 2026-09-07 |
 | 6. Host Controls & RTL Interface Hardening | 3/3 | Complete | 2026-09-08 |
 | 7. Deployment & Hosting | 0/0 | Complete (already live, retroactively confirmed) | 2026-09-08 |
-| 8. Load & Capacity Verification | 0/1 | Not started | - |
+| 8. Load & Capacity Verification | 1/1 | In Progress|  |
 | 9. Real-Device Rehearsal | 0/TBD | Not started | - |
