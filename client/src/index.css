@@ -617,3 +617,25 @@ li {
   color: var(--party-cream);
 }
 
+/* plan 260910-9ks — the Lobby-only DVD-screensaver-style bouncing hero
+   photo (BouncingLogo.tsx). `position: fixed` bounces it off the real
+   viewport edges (matching the component's window.innerWidth/innerHeight
+   math) regardless of Lobby's own scroll height. `pointer-events: none` is
+   CRITICAL — without it the logo could sit over a button or roster entry
+   and swallow taps. `z-index: 1` keeps it below .reconnect-overlay
+   (z-index: 10) and the other fixed overlays in this file. */
+.bouncing-logo {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 4rem;
+  height: 4rem;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid var(--party-cream);
+  box-shadow: 0 3px 10px rgba(31, 17, 71, 0.35);
+  pointer-events: none;
+  z-index: 1;
+  will-change: transform;
+}
+
