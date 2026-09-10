@@ -41,7 +41,7 @@
     {
       "number": "8",
       "name": "Load & Capacity Verification",
-      "status": "pending"
+      "status": "complete"
     },
     {
       "number": "9",
@@ -50,9 +50,9 @@
     }
   ],
   "next": {
-    "command": "/gsd:progress",
-    "label": "Show progress",
-    "reason": "Unsure of state — showing progress"
+    "command": "/gsd:progress --next",
+    "label": "Advance to the next step (plan phase 9)",
+    "reason": "Phase 9 of 9 — needs a plan"
   },
-  "updated_at": "2026-09-10T13:28:07.010Z"
+  "updated_at": "2026-09-10T14:37:39.551Z"
 }

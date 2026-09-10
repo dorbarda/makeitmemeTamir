@@ -31,7 +31,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: Hebrew RTL Meme Compositor & Souvenir** - Players can produce and keep a correctly rendered, right-to-left Hebrew meme image as their souvenir
 - [x] **Phase 6: Host Controls & RTL Interface Hardening** - The host has recovery tools for live mishaps, and the whole interface reads correctly in Hebrew on iPhone and Android
 - [x] **Phase 7: Deployment & Hosting** - The game is live on a public URL, on a hosting choice verified to hold persistent connections, with Tamir's photos loaded
-- [ ] **Phase 8: Load & Capacity Verification** - A scripted test proves the server holds 12+ simultaneous players through a full game, without involving real guests
+- [x] **Phase 8: Load & Capacity Verification** - A scripted test proves the server holds 12+ simultaneous players through a full game, without involving real guests (completed 2026-09-10)
 - [ ] **Phase 9: Real-Device Rehearsal** - A small group on real phones proves the join flow, Hebrew keyboards, and the iPhone save flow at least 24 hours before the party
 
 ## Phase Details
@@ -279,5 +279,5 @@ natural requirement-coverage position.)
 | 5. Hebrew RTL Meme Compositor & Souvenir | 5/5 | Complete | 2026-09-07 |
 | 6. Host Controls & RTL Interface Hardening | 3/3 | Complete | 2026-09-08 |
 | 7. Deployment & Hosting | 0/0 | Complete (already live, retroactively confirmed) | 2026-09-08 |
-| 8. Load & Capacity Verification | 1/1 | In Progress|  |
+| 8. Load & Capacity Verification | 1/1 | Complete    | 2026-09-10 |
 | 9. Real-Device Rehearsal | 0/TBD | Not started | - |
