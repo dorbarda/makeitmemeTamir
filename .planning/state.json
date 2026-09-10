@@ -31,7 +31,7 @@
     {
       "number": "6",
       "name": "Host Controls & RTL Interface Hardening",
-      "status": "pending"
+      "status": "complete"
     },
     {
       "number": "7",
@@ -50,9 +50,9 @@
     }
   ],
   "next": {
-    "command": "/gsd:progress --next",
-    "label": "Advance to the next step",
-    "reason": "Phase 6 of 9 · 0% · executing"
+    "command": "/gsd:progress",
+    "label": "Show progress",
+    "reason": "Unsure of state — showing progress"
   },
-  "updated_at": "2026-09-07T17:34:10.620Z"
+  "updated_at": "2026-09-10T13:28:07.010Z"
 }
