@@ -406,6 +406,20 @@ li {
   color: var(--party-ink);
 }
 
+/* plan 260910-9ks — the "add another caption box" affordance. Dashed border
+   and translucent background so it reads as a distinct "add another" action,
+   never mistaken for the primary send button or the outlined remove button.
+   Inherits width/min-height/border-radius/font/cursor from the global
+   `button` rule. No letter-spacing on the Hebrew label, per project
+   convention. */
+.caption-box-add {
+  background: rgba(255, 255, 255, 0.15);
+  border: 2px dashed var(--party-cream);
+  color: var(--party-cream);
+  box-shadow: none;
+  margin: 0 0 0.75rem;
+}
+
 /* D-03 — the between-rounds scoreboard. Mobile-first, no fixed widths, same
    shape as .round-end-panel. */
 .scoreboard {
