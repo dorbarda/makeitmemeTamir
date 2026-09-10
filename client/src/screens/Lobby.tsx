@@ -133,7 +133,7 @@ export function Lobby({ snapshot }: LobbyProps) {
   }
 
   return (
-    <main>
+    <main className="hero-bg">
       {/* The code, the QR and the share control are rendered for every
           player, never gated on snapshot.you.isHost (D-12) — isHost stays in
           the snapshot for the server's own use and for plan 01-04's transfer
