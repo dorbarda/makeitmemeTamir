@@ -79,6 +79,8 @@ export const HEBREW_UI = {
   // plan 02-05 — round-end / game-end (D-09's skip line; ranking is
   // explicitly Phase 4, see RoundEndPanel.tsx)
   roundEndTooFewCaptions: "לא הגיעו מספיק כיתובים כדי לדרג בסיבוב הזה",
+  // plan 06-01 — host-skipped round message (LIVE-04, D-01)
+  roundSkippedByHost: "המנחה ביטל את הסיבוב הזה",
   // plan 03-01 — real content: photos, tier names, scoreboard
   ratingTierFunniest: "דנה מגנזי",
   ratingTierFine: "תמיר פטריות",
@@ -92,4 +94,25 @@ export const HEBREW_UI = {
   winnerHeading: "המנצחים",
   bestOfNightHeading: "המצחיקים של הערב",
   bestOfNightEmpty: "עדיין אין מספיק דירוגים כדי לבחור את המצחיקים של הערב",
+  // plan 05-03 — multi-box drag editor
+  memeEditorInstructions: "גררו כל כיתוב למקום הרצוי על התמונה",
+  addCaptionBoxButton: "הוספת כיתוב",
+  deleteCaptionButton: "מחיקה",
+  // plan 05-04 — save/share
+  saveMemeButton: "שמירה או שיתוף",
+  longPressInstructions: "לחצו לחיצה ארוכה על התמונה ובחרו 'שמירת תמונה'",
+  doneButton: "סיום",
+  // plan 06-02 — host controls panel and confirmation copy
+  hostControlsHeading: "לא עובד? בעזרת המנחה",
+  skipRoundButton: "דילוג על הסיבוב",
+  removePlayerButton: "הסרת שחקן",
+  endGameButton: "סיום המשחק",
+  restartGameButton: "משחק חדש",
+  skipRoundConfirm: "הסיבוב הנוכחי יבוטל. בטוח?",
+  endGameConfirm: "המשחק הנוכחי יסתיים. בטוח?",
+  restartGameConfirm: "כל השחקנים חוזרים ללובי עם ניקוד חדש. בטוח?",
+  removePlayerConfirm: "זה יתנתק את {playerName} מהחדר. בטוח?",
+  removePlayerEmptyState: "אין שחקנים אחרים להסרה",
+  cancelButton: "ביטול",
+  confirmButton: "אישור",
 };

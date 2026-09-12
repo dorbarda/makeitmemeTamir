@@ -1,5 +1,6 @@
 import type { LobbySnapshot } from "@shared/protocol.js";
 import { HEBREW_UI } from "@shared/messages.js";
+import { memeDataUrl } from "../../canvas/compositor.js";
 
 type RoundEndPanelProps = {
   snapshot: LobbySnapshot;
@@ -27,13 +28,13 @@ export function RoundEndPanel({ snapshot }: RoundEndPanelProps) {
   return (
     <section className="round-end-panel">
       {rankedEntries.length === 0 ? (
-        <p>{HEBREW_UI.roundEndTooFewCaptions}</p>
+        <p>{roundEnd.skippedByHost ? HEBREW_UI.roundSkippedByHost : HEBREW_UI.roundEndTooFewCaptions}</p>
       ) : (
         <ul>
           {rankedEntries.map((entry) => (
             <li key={entry.authorId} className="round-end-entry">
               <p>{entry.authorName}</p>
-              <p>{entry.caption}</p>
+              <img className="meme-photo" src={memeDataUrl(entry.meme)} alt={HEBREW_UI.photoAlt} />
               <p className="round-end-score">
                 {entry.score} {HEBREW_UI.roundResultsPointsSuffix}
               </p>

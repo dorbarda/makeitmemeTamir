@@ -34,7 +34,7 @@ export function Home({ onHaveCode }: HomeProps) {
   }
 
   return (
-    <main>
+    <main className="hero-bg">
       <h1>מסיבת הממים של תמיר</h1>
       <form onSubmit={handleCreateRoom}>
         <label>

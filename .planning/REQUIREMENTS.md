@@ -56,7 +56,7 @@ Requirements for the party night. Each maps to a roadmap phase.
 
 ### Live Reliability
 
-- [ ] **LIVE-01**: At least 12 players can play in one room simultaneously without degradation
+- [x] **LIVE-01**: At least 12 players can play in one room simultaneously without degradation
 - [ ] **LIVE-02**: A player's identity survives a phone lock, a page refresh, or a brief disconnect — they rejoin the game in progress with their score intact
 - [ ] **LIVE-03**: The game never stalls waiting for a player who has left, disconnected, or stopped playing
 - [ ] **LIVE-04**: Host can skip the current round
@@ -69,7 +69,7 @@ Requirements for the party night. Each maps to a roadmap phase.
 - [ ] **DEPLOY-01**: The game is deployed to a public URL reachable from any phone on mobile data or venue WiFi
 - [ ] **DEPLOY-02**: Tamir's photo set is loaded into the game
 - [ ] **DEPLOY-03**: A rehearsal is completed with 3-4 real phones at least 24 hours before the party, covering the join flow, Hebrew keyboards on both iPhone and Android, and saving a meme on a real iPhone (kept small deliberately — the party is a surprise)
-- [ ] **DEPLOY-04**: A simulated load test proves the server holds 12+ concurrent players through a full game, using scripted or browser-tab clients rather than real guests, so room capacity is verified without revealing the surprise
+- [x] **DEPLOY-04**: A simulated load test proves the server holds 12+ concurrent players through a full game, using scripted or browser-tab clients rather than real guests, so room capacity is verified without revealing the surprise
 
 ## v2 Requirements
 
@@ -143,7 +143,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | HEB-01 | Phase 6 | Pending |
 | HEB-02 | Phase 6 | Pending |
 | HEB-03 | Phase 5 | Pending |
-| LIVE-01 | Phase 8 | Pending |
+| LIVE-01 | Phase 8 | Complete |
 | LIVE-02 | Phase 1 | Pending |
 | LIVE-03 | Phase 2 | Pending |
 | LIVE-04 | Phase 6 | Pending |
@@ -153,9 +153,10 @@ Which phases cover which requirements. Populated during roadmap creation.
 | DEPLOY-01 | Phase 7 | Pending |
 | DEPLOY-02 | Phase 7 | Pending |
 | DEPLOY-03 | Phase 9 | Pending |
-| DEPLOY-04 | Phase 8 | Pending |
+| DEPLOY-04 | Phase 8 | Complete |
 
 **Coverage:**
+
 - v1 requirements: 40 total
 - Mapped to phases: 40
 - Unmapped: 0 ✓

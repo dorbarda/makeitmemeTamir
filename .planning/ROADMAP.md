@@ -28,10 +28,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Server-Authoritative Round Engine** - The server owns every phase's clock so the game never freezes on a missing or slow player
 - [x] **Phase 3: Core Loop Checkpoint (Real Phones, End-to-End)** - A full round of write-a-caption, rate memes one-at-a-time, and score is proven working on real phones before deeper features are built
 - [x] **Phase 4: Full Round, Rating & Scoring Completion** - The complete round loop ships: no-repeat photos, photo swap, cannot-rate-own-meme with hidden ratings until each meme's step closes, ranked round results, running score totals, final winner, and best-of-night
-- [ ] **Phase 5: Hebrew RTL Meme Compositor & Souvenir** - Players can produce and keep a correctly rendered, right-to-left Hebrew meme image as their souvenir
-- [ ] **Phase 6: Host Controls & RTL Interface Hardening** - The host has recovery tools for live mishaps, and the whole interface reads correctly in Hebrew on iPhone and Android
-- [ ] **Phase 7: Deployment & Hosting** - The game is live on a public URL, on a hosting choice verified to hold persistent connections, with Tamir's photos loaded
-- [ ] **Phase 8: Load & Capacity Verification** - A scripted test proves the server holds 12+ simultaneous players through a full game, without involving real guests
+- [x] **Phase 5: Hebrew RTL Meme Compositor & Souvenir** - Players can produce and keep a correctly rendered, right-to-left Hebrew meme image as their souvenir
+- [x] **Phase 6: Host Controls & RTL Interface Hardening** - The host has recovery tools for live mishaps, and the whole interface reads correctly in Hebrew on iPhone and Android
+- [x] **Phase 7: Deployment & Hosting** - The game is live on a public URL, on a hosting choice verified to hold persistent connections, with Tamir's photos loaded
+- [x] **Phase 8: Load & Capacity Verification** - A scripted test proves the server holds 12+ simultaneous players through a full game, without involving real guests (completed 2026-09-10)
 - [ ] **Phase 9: Real-Device Rehearsal** - A small group on real phones proves the join flow, Hebrew keyboards, and the iPhone save flow at least 24 hours before the party
 
 ## Phase Details
@@ -140,6 +140,7 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 04-02-PLAN.md — Running score display, the tied-winner screen, and the incrementally-tracked best-of-the-night screen
+
 **UI hint**: yes
 
 ### Phase 5: Hebrew RTL Meme Compositor & Souvenir
@@ -161,19 +162,19 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 05-02-PLAN.md — The tracer: single-box canvas compositor in WritingPanel, rasterize, submit as meme, rendered identically in RatingPanel/RoundEndPanel/GameEndPanel
+- [x] 05-02-PLAN.md — The tracer: single-box canvas compositor in WritingPanel, rasterize, submit as meme, rendered identically in RatingPanel/RoundEndPanel/GameEndPanel
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 05-03-PLAN.md — Multi-box drag editor: up to 3 caption boxes, pointer-event drag-and-drop, hit-testing
+- [x] 05-03-PLAN.md — Multi-box drag editor: up to 3 caption boxes, pointer-event drag-and-drop, hit-testing
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 05-04-PLAN.md — Save/share for every author, plus best-of-night view/export reuse (D-03)
+- [x] 05-04-PLAN.md — Save/share for every author, plus best-of-night view/export reuse (D-03)
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 05-05-PLAN.md — Full regression and the real-device check (touch-drag, HEB-03 RTL rendering, iOS save/share)
+- [x] 05-05-PLAN.md — Full regression and the real-device check (touch-drag, HEB-03 RTL rendering, iOS save/share)
 
 ### Phase 6: Host Controls & RTL Interface Hardening
 
@@ -187,8 +188,21 @@ Plans:
   3. Every screen in the app reads correctly right-to-left in Hebrew, confirmed by reading each screen aloud in Hebrew word order on a real phone
   4. Typing a Hebrew caption works correctly on both a real iPhone keyboard and a real Android keyboard
 
-**Plans**: TBD
+**Plans**: 3 plans
 **UI hint**: yes
+
+Plans:
+**Wave 1**
+
+- [x] 06-01-PLAN.md — Server-side host recovery actions: skip round, remove player, end game, restart game
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [x] 06-02-PLAN.md — Host Controls panel: the three-action confirm modal and the remove-player two-step flow
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [x] 06-03-PLAN.md — Full regression, RTL audit, Hebrew keyboard, and host-controls real-device checkpoint
 
 ### Phase 7: Deployment & Hosting
 
@@ -199,6 +213,22 @@ Plans:
 
   1. The deployed app is reachable at a public URL from a phone on mobile data and separately from venue WiFi, on a host explicitly verified (against its current docs/pricing page, not assumed from research) to reliably hold persistent WebSocket connections for the length of a game — with a decision made on paying for event week if there is any doubt
   2. Tamir's full photo set is loaded into the deployed game and available to be drawn from during rounds
+
+**Plans**: 0 (retroactively confirmed already met — see Resolution below)
+
+**Resolution (2026-09-08, no new plans executed):** The app was already deployed and working
+(Render service `makeitmemeTamir`, free plan, region Frankfurt, URL
+`https://makeitmemetamir.onrender.com`) before this phase was reached — the user has been
+real-device-testing against it since Phase 3. Confirmed via the Render API that the service is on
+the free plan; confirmed via web search (render.com itself is unreachable from this sandbox) the
+plan's current terms: 750 free instance-hours/month, spins down after 15 min idle, ~1 min to wake.
+This resolves the direct contradiction flagged in STATE.md between STACK.md and PITFALLS.md — the
+free tier does reliably hold persistent WebSocket connections once awake; the only risk is the
+idle spin-down before the game starts. User explicitly chose to stay on the free tier for event
+night rather than pay for a higher tier, using the manual wake-up mitigation already documented in
+STACK.md (open the URL 5-10 min before guests join; live WebSocket traffic then keeps it awake).
+Tamir's full photo set (54 files, compressed to 7.5MB) is committed and already serving from the
+deployed app, confirmed by the user's own real-device play-throughs.
 
 **Plans**: TBD
 
@@ -212,7 +242,12 @@ Plans:
   1. A simulated test using 12+ scripted or browser-tab clients (not real guests) completes a full game against the deployed server without crashing, hanging, or requiring a restart
   2. During that test, 12+ simultaneous players can submit captions and ratings within the same round with no submission lost and no noticeable slowdown
 
-**Plans**: TBD
+**Plans**: 1/1 plans executed
+
+Plans:
+**Wave 1**
+
+- [x] 08-01-PLAN.md — Tracer (3 players, 1 round) plus the real capacity proof (12 concurrent players, 3 rounds, latency + no-loss assertions, no-restart sanity check) against a locally started server (D-01/D-02)
 
 ### Phase 9: Real-Device Rehearsal
 
@@ -241,8 +276,8 @@ natural requirement-coverage position.)
 | 2. Server-Authoritative Round Engine | 5/5 | Complete | 2026-09-06 |
 | 3. Core Loop Checkpoint (Real Phones, End-to-End) | 1/1 | Complete | 2026-09-06 |
 | 4. Full Round, Rating & Scoring Completion | 2/2 | Complete | 2026-09-07 |
-| 5. Hebrew RTL Meme Compositor & Souvenir | 0/5 | Not started | - |
-| 6. Host Controls & RTL Interface Hardening | 0/TBD | Not started | - |
-| 7. Deployment & Hosting | 0/TBD | Not started | - |
-| 8. Load & Capacity Verification | 0/TBD | Not started | - |
+| 5. Hebrew RTL Meme Compositor & Souvenir | 5/5 | Complete | 2026-09-07 |
+| 6. Host Controls & RTL Interface Hardening | 3/3 | Complete | 2026-09-08 |
+| 7. Deployment & Hosting | 0/0 | Complete (already live, retroactively confirmed) | 2026-09-08 |
+| 8. Load & Capacity Verification | 1/1 | Complete    | 2026-09-10 |
 | 9. Real-Device Rehearsal | 0/TBD | Not started | - |

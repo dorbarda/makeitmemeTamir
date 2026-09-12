@@ -8,6 +8,8 @@ import {
 } from "@shared/protocol.js";
 import { HEBREW_ERRORS, HEBREW_UI } from "@shared/messages.js";
 import { getSocket } from "../../socket/connection";
+import { memeDataUrl } from "../../canvas/compositor.js";
+import { SaveShareButton } from "./SaveShareButton";
 
 type RatingPanelProps = {
   snapshot: LobbySnapshot;
@@ -25,8 +27,11 @@ const TIER_LABELS: Record<RatingValue, string> = {
  * no client-side phase inference, no optimistic state. The panel only ever
  * flips to the rated view once the next snapshot says `youHaveRated`, the
  * same round-trip discipline as `WritingPanel`'s `youSubmitted`. The meme's
- * own author sees a waiting state and no buttons at all (VOTE-03); nobody
- * sees any other player's individual rating, only the live X-of-Y count.
+ * own author sees a waiting state with no rating buttons (VOTE-03) — this
+ * dwell time is where MEME-03's save/share button lives (plan 05-04), since
+ * it's the one point every author already sits looking at their own
+ * finished meme. Nobody sees any other player's individual rating, only
+ * the live X-of-Y count.
  */
 export function RatingPanel({ snapshot }: RatingPanelProps) {
   const [error, setError] = useState<string | undefined>(undefined);
@@ -65,11 +70,13 @@ export function RatingPanel({ snapshot }: RatingPanelProps) {
         {ratingStep.index + 1} {HEBREW_UI.ofSeparator} {ratingStep.total}
       </p>
 
-      <img className="meme-photo" src={ratingStep.photoUrl} alt={HEBREW_UI.photoAlt} />
-      <p>{ratingStep.caption}</p>
+      <img className="meme-photo" src={memeDataUrl(ratingStep.meme)} alt={HEBREW_UI.photoAlt} />
 
       {ratingStep.youAreAuthor ? (
-        <p>{HEBREW_UI.yourMemeWaiting}</p>
+        <>
+          <p>{HEBREW_UI.yourMemeWaiting}</p>
+          <SaveShareButton meme={ratingStep.meme} />
+        </>
       ) : ratingStep.youHaveRated ? (
         <p>{HEBREW_UI.ratedAlreadyNote}</p>
       ) : (

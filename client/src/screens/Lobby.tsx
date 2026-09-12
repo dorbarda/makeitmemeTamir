@@ -10,6 +10,7 @@ import { HEBREW_ERRORS, HEBREW_UI } from "@shared/messages.js";
 import { getSocket } from "../socket/connection";
 import { graphemesRemaining, clampForInput } from "../names/nameInput";
 import { shareJoinLink } from "../share/shareJoinLink";
+import { BouncingLogo } from "../components/BouncingLogo";
 
 type LobbyProps = {
   snapshot: LobbySnapshot;
@@ -133,7 +134,8 @@ export function Lobby({ snapshot }: LobbyProps) {
   }
 
   return (
-    <main>
+    <main className="hero-bg">
+      <BouncingLogo />
       {/* The code, the QR and the share control are rendered for every
           player, never gated on snapshot.you.isHost (D-12) — isHost stays in
           the snapshot for the server's own use and for plan 01-04's transfer

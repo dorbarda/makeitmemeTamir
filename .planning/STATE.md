@@ -1,19 +1,19 @@
 ---
 gsd_state_version: 1.0
-current_phase: 05
-current_phase_name: Hebrew RTL Meme Compositor & Souvenir
-status: executing
-stopped_at: Phase 5 planned — 5 plans across 5 sequential waves (wire migration, tracer, drag editor, save/share + best-of reuse, real-device gate); ready for /gsd-execute-phase 5
-last_updated: "2026-09-07T06:29:42.402Z"
-last_activity: 2026-09-07
-last_activity_desc: Phase 05 execution started
-state_head: 1dddf5e93b103f625c20257dad5029f4f0a0b566
+current_phase: 9
+current_phase_name: Real-Device Rehearsal
+status: planning
+stopped_at: Phase 08 complete, ready to plan Phase 9
+last_updated: "2026-09-10T14:37:39.537Z"
+last_activity: 2026-09-10
+last_activity_desc: Phase 08 complete, transitioned to Phase 9
+state_head: 6bd16c335f453528bc2fa7b6877a53fd94bd15c0
 progress:
   total_phases: 9
-  completed_phases: 4
-  total_plans: 17
-  completed_plans: 12
-  percent: 44
+  completed_phases: 1
+  total_plans: 21
+  completed_plans: 21
+  percent: 11
 ---
 
 # Project State
@@ -23,22 +23,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-09-05)
 
 **Core value:** Ten-plus friends in the same room can all join on their phones and play a full game of write-a-caption-and-vote in Hebrew without anyone getting stuck, disconnected, or confused.
-**Current focus:** Phase 05 — Hebrew RTL Meme Compositor & Souvenir
+**Current focus:** Phase 08 — Load & Capacity Verification
 
 ## Current Position
 
-Phase: 05 (Hebrew RTL Meme Compositor & Souvenir) — EXECUTING
-Plan: 1 of 5
-Status: Executing Phase 05
-Last activity: 2026-09-07 — Phase 05 execution started
+Phase: 9 — Real-Device Rehearsal
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-09-10 — Phase 08 complete, transitioned to Phase 9
 
-Progress: [████░░░░░░] 44%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 0
+- Total plans completed: 1
 - Average duration: - min
 - Total execution time: 0 hours
 
@@ -46,7 +46,7 @@ Progress: [████░░░░░░] 44%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 08 | 1 | - | - |
 
 **Recent Trend:**
 
@@ -54,6 +54,11 @@ Progress: [████░░░░░░] 44%
 - Trend: -
 
 *Updated after each plan completion*
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 08 P01 | 25min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -79,6 +84,7 @@ Recent decisions affecting current work:
   results screen ranks the round's memes by total points), mapped to Phase 4. Phase structure,
   ordering, and all other requirement mappings are unchanged; only the wording and scope of
   Phases 2, 3, and 4 were corrected to match.
+- [Phase 08]: Phase 8: extended D-03's literal 1-round load test to the room's real DEFAULT_ROUND_COUNT (3 rounds), and set a documented 500ms per-submission latency threshold, resolving CONTEXT.md's two Claude's Discretion gaps.
 
 ### Pending Todos
 
@@ -90,14 +96,26 @@ Recent decisions affecting current work:
 
 ### Blockers/Concerns
 
-- **OPEN DECISION (Phase 7):** STACK.md and PITFALLS.md directly contradict each other on
-  whether Render's free tier reliably supports persistent WebSocket connections. Must be
-  verified against the host's current live pricing/docs page before Phase 7 executes, with a
-  bias toward paying a small amount for event week if there's any doubt.
-- **OPEN DECISION (Phase 5):** iOS Safari save/share flow for the composited meme is rated LOW
-  confidence in research and must be verified on a real iPhone, not assumed from documentation.
+- **RESOLVED (Phase 7):** Render's free tier does support persistent WebSocket connections
+  (confirmed working — the deployed app has already run full real-device games). Confirmed via
+  Render API the service is on the free plan; confirmed via web search (render.com itself is
+  blocked from this sandbox) the current terms: 750 free instance-hours/month, spins down after
+  15 min idle, ~1 min to wake. User explicitly chose to stay on the free tier for event night,
+  using the manual wake-up mitigation (open the URL 5-10 min before guests join; live WebSocket
+  traffic then keeps it awake) rather than paying for a higher tier.
+- **RESOLVED (Phase 5):** iOS Safari save/share flow for the composited meme was confirmed working
+  on a real phone by the user (2026-09-07) — no longer an open risk.
 - Party date is fixed and cannot move — one week total. Reliability outranks features/polish
   everywhere there is a tradeoff (explicit user priority).
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260907-mtn | Fix photoUrl() in server/src/rooms/photos.ts to URL-encode the filename before building the /tamir-photos/ path | 2026-09-07 | cfa8f55 | [260907-mtn-fix-photourl-in-server-src-rooms-photos-](./quick/260907-mtn-fix-photourl-in-server-src-rooms-photos-/) |
+| 260907-mzz | Compress the real Tamir photos in client/public/tamir-photos to reduce mobile load time (42.99MB -> 7.74MB, 82% reduction) | 2026-09-07 | 5e47c75 | [260907-mzz-compress-the-real-tamir-photos-in-client](./quick/260907-mzz-compress-the-real-tamir-photos-in-client/) |
+| 260910-8yz | Apply make-it-meme-style visual overhaul: bold chunky fonts, gradient sunburst backgrounds, card-style buttons; move client/public/tamir-photos/main-photo.jpeg to a dedicated assets location and reuse as hero background across landing/lobby/end-game screens; keep Hebrew RTL intact | 2026-09-10 | 635b796 | [260910-8yz-apply-make-it-meme-style-visual-overhaul](./quick/260910-8yz-apply-make-it-meme-style-visual-overhaul/) |
+| 260910-9ks | Three visual/UX fixes: auto-size + round the caption box in the canvas compositor; add a clear add-box affordance to the manual multi-box caption editor; add a DVD-screensaver-style bouncing Tamir image (client/public/branding/dvd-bounce.jpeg) to the waiting lobby screen | 2026-09-10 | e8e718d | [260910-9ks-three-visual-ux-fixes-1-auto-size-round-](./quick/260910-9ks-three-visual-ux-fixes-1-auto-size-round-/) |
 
 ## Deferred Items
 
@@ -109,6 +127,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-09-07T05:45:00.000Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-hebrew-rtl-meme-compositor-souvenir/05-CONTEXT.md
+Last session: 2026-09-10T14:21:17.399Z
+Stopped at: Phase 08 complete, ready to plan Phase 9
+Resume file: None

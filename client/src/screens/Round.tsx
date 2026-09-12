@@ -5,6 +5,7 @@ import { WritingPanel } from "./round/WritingPanel";
 import { RatingPanel } from "./round/RatingPanel";
 import { RoundEndPanel } from "./round/RoundEndPanel";
 import { GameEndPanel } from "./round/GameEndPanel";
+import { HostControls } from "./round/HostControls";
 
 type RoundProps = {
   snapshot: LobbySnapshot;
@@ -49,9 +50,10 @@ const PANEL_ALREADY_LISTS_PLAYERS: ReadonlySet<RoomPhase> = new Set(["WRITING", 
 
 export function Round({ snapshot }: RoundProps) {
   const heading = snapshot.phase === "LOBBY" ? "" : PHASE_HEADINGS[snapshot.phase];
+  const isGameEnd = snapshot.phase === "GAME_END";
 
   return (
-    <main>
+    <main className={isGameEnd ? "hero-bg" : undefined}>
       <Countdown deadlineAt={snapshot.deadlineAt} serverNow={snapshot.serverNow} />
       <h1>{heading}</h1>
 
@@ -65,6 +67,8 @@ export function Round({ snapshot }: RoundProps) {
       {snapshot.phase === "RATING" && <RatingPanel snapshot={snapshot} />}
       {snapshot.phase === "ROUND_END" && <RoundEndPanel snapshot={snapshot} />}
       {snapshot.phase === "GAME_END" && <GameEndPanel snapshot={snapshot} />}
+
+      {snapshot.you.isHost && <HostControls snapshot={snapshot} />}
 
       {!PANEL_ALREADY_LISTS_PLAYERS.has(snapshot.phase) && (
         <ul>

@@ -18,6 +18,7 @@ import {
 import {
   BETWEEN_MEMES_MS,
   BETWEEN_PHASES_MS,
+  DISCONNECT_QUORUM_GRACE_MS,
   HOST_TRANSFER_GRACE_MS,
   MEME_MAX_BASE64_CHARS,
   MIN_PLAYERS_TO_START,
@@ -78,6 +79,28 @@ export type SubmitRatingOutcome =
 export type SwapPhotoOutcome =
   | { ok: true; photoUrl: string }
   | { ok: false; error: "WRONG_PHASE" | "ALREADY_SUBMITTED" | "SWAP_ALREADY_USED" };
+
+/** Result of a skip-round attempt — never throws, always tells the caller
+ * why. Shaped exactly like the other outcome types (Phase 6, LIVE-04). */
+export type SkipRoundOutcome =
+  | { ok: true }
+  | { ok: false; error: "NOT_HOST" | "WRONG_PHASE" };
+
+/** Result of a remove-player attempt — never throws, always tells the
+ * caller why. Never returns anything but NOT_HOST or `{ ok: true }`: a
+ * forged, self-targeted, or already-removed target is a safe no-op, never a
+ * distinct error code (Phase 6, LIVE-05, this plan's own prohibitions). */
+export type RemovePlayerOutcome = { ok: true } | { ok: false; error: "NOT_HOST" };
+
+/** Result of an end-game attempt — never throws, always tells the caller
+ * why (Phase 6, LIVE-06). Refuses `WRONG_PHASE` at LOBBY (nothing to end)
+ * and at GAME_END (already ended). */
+export type EndGameOutcome = { ok: true } | { ok: false; error: "NOT_HOST" | "WRONG_PHASE" };
+
+/** Result of a restart-game attempt — never throws, always tells the caller
+ * why (Phase 6, LIVE-07). Legal from any phase, including LOBBY itself as a
+ * harmless no-op reset of scores that are already 0 (D-04). */
+export type RestartGameOutcome = { ok: true } | { ok: false; error: "NOT_HOST" };
 
 // Standard, correctly-padded base64 — exactly what canvas.toBlob() ->
 // FileReader.readAsDataURL() -> stripping the "data:image/png;base64,"
@@ -151,6 +174,11 @@ export class Room {
   /** ROUND-06/D-02 — the playerIds who have already used this round's one
    * swap. Cleared every `enterWriting()`, exactly like `submissions`. */
   swapUsed = new Set<string>();
+  /** Phase 6, LIVE-04/D-01 — true only during the ROUND_END window a
+   * host-initiated skip produced; read once by `buildRoundEndView` and reset
+   * to `false` both defensively in `enterWriting()` and by the round-end
+   * continuation closure in `finishRound()`. */
+  roundEndSkippedByHost = false;
 
   /**
    * Invoked whenever a delayed internal timer (a roster fade, and later a
@@ -165,6 +193,12 @@ export class Room {
   onStateChanged?: () => void;
 
   private fadeTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  /** playerId -> the epoch-ms timestamp `detach()` most recently recorded a
+   * disconnect at; deleted by `attach()`. Read only by `isPendingForQuorum`
+   * (bug fix: writing-phase-ends-early) to tell a just-now transport blip
+   * apart from a player who has been gone long enough to no longer count
+   * toward the writing/rating early-finish quorum. */
+  private disconnectedAt = new Map<string, number>();
   private hostTransferTimer: ReturnType<typeof setTimeout> | null = null;
   /** The single round-clock timer primitive — only one phase is ever "live"
    * at a time, so unlike `fadeTimers` this needs no map. Follows the exact
@@ -268,6 +302,7 @@ export class Room {
     if (!player) return;
 
     player.connected = true;
+    this.disconnectedAt.delete(playerId);
     this.clearFadeTimer(playerId);
     if (playerId === this.hostId) {
       this.clearHostTransferTimer();
@@ -290,6 +325,7 @@ export class Room {
     if (!player) return;
 
     player.connected = false;
+    this.disconnectedAt.set(playerId, Date.now());
 
     if (this.phase === "LOBBY") {
       this.scheduleFade(playerId);
@@ -305,6 +341,7 @@ export class Room {
     const timer = setTimeout(() => {
       this.fadeTimers.delete(playerId);
       this.players.delete(playerId);
+      this.disconnectedAt.delete(playerId);
       this.onStateChanged?.();
     }, ROSTER_FADE_GRACE_MS);
     this.fadeTimers.set(playerId, timer);
@@ -408,19 +445,47 @@ export class Room {
   }
 
   /**
-   * If every currently connected player has submitted a caption this round,
-   * collapses the writing deadline to `WRITING_COLLAPSE_MS` from now instead
-   * of leaving the room to sit out the rest of the original deadline
-   * (D-07). Deliberately keyed on connected players only (Phase 1 D-17,
-   * LIVE-03): a player who has left must never be able to hold the early
-   * finish hostage. Because collapse only shortens, a disconnected player
-   * who reconnects in time can still submit against the unchanged deadline.
+   * True while `playerId` should still count toward the "is everyone done"
+   * quorum `maybeCollapseWriting` and `maybeCollapseRating` each wait on:
+   * connected outright, or disconnected so recently (within
+   * `DISCONNECT_QUORUM_GRACE_MS` of `detach()`) that a real-phone screen
+   * lock/backgrounding blip cannot yet be told apart from a genuine
+   * departure (bug: writing-phase-ends-early — a live 3-player test showed
+   * round 2/3 writing phases collapsing in 5-10s because a player's phone
+   * locking between rounds instantly zeroed them out of this quorum; the
+   * identical shape reproduced in the RATING phase's own quorum as a
+   * fast-follow — bug: rating-phase-collapses-early — over an even shorter
+   * 8-15s deadline). Once a disconnect ages past the grace window with no
+   * reconnect, this returns false and LIVE-03 holds exactly as before: a
+   * player who has truly left can never hold the early finish hostage.
+   */
+  private isPendingForQuorum(playerId: string): boolean {
+    const player = this.players.get(playerId);
+    if (!player) return false;
+    if (player.connected) return true;
+    const since = this.disconnectedAt.get(playerId);
+    return since !== undefined && Date.now() - since < DISCONNECT_QUORUM_GRACE_MS;
+  }
+
+  /**
+   * If every player still pending on this round (§isPendingForQuorum — either
+   * connected, or too-recently-disconnected to count as gone yet) has
+   * submitted a caption, collapses the writing deadline to
+   * `WRITING_COLLAPSE_MS` from now instead of leaving the room to sit out the
+   * rest of the original deadline (D-07). Because collapse only shortens, a
+   * disconnected player who reconnects in time can still submit against the
+   * unchanged (or already-collapsed) deadline; a player still within their
+   * grace window simply leaves the round to run its normal full course
+   * instead of forcing a premature collapse — never a stall, since the
+   * phase's own deadline timer is the unconditional backstop either way.
    */
   private maybeCollapseWriting(): void {
-    const connectedPlayers = [...this.players.values()].filter((p) => p.connected);
-    if (connectedPlayers.length === 0) return;
-    const allSubmitted = connectedPlayers.every((p) => this.submissions.has(p.id));
-    if (allSubmitted) {
+    const anyoneConnected = [...this.players.values()].some((p) => p.connected);
+    if (!anyoneConnected) return;
+    const stillPending = [...this.players.keys()].some(
+      (id) => !this.submissions.has(id) && this.isPendingForQuorum(id),
+    );
+    if (!stillPending) {
       this.collapseDeadline(WRITING_COLLAPSE_MS, () => this.closeWriting());
     }
   }
@@ -527,6 +592,7 @@ export class Room {
     this.ratings.clear();
     this.eligibleAtClose.clear();
     this.swapUsed.clear();
+    this.roundEndSkippedByHost = false;
     this.photoAssignments = this.drawPhotosForRound([...this.players.keys()]);
     this.schedulePhase(Date.now() + this.settings.writingSeconds * 1000, () =>
       this.closeWriting(),
@@ -804,18 +870,35 @@ export class Room {
   }
 
   /**
-   * If every eligible rater for the current step has now rated it, collapses
-   * the step's deadline to `RATING_COLLAPSE_MS` from now instead of leaving
-   * the room to sit out the rest of the original deadline (D-07). Reuses
-   * `collapseDeadline`, the single chokepoint through which any live
-   * deadline may ever be shortened, so "never extends" holds here for free.
+   * If every rater still pending on this step (§isPendingForQuorum — either
+   * connected, or too-recently-disconnected to count as gone yet) has now
+   * rated it, collapses the step's deadline to `RATING_COLLAPSE_MS` from now
+   * instead of leaving the room to sit out the rest of the original deadline
+   * (D-07). Mirrors `maybeCollapseWriting` (bug: rating-phase-collapses-early,
+   * the RATING-phase sibling of writing-phase-ends-early) — a rater whose
+   * phone locks/backgrounds an instant before the others submit is no longer
+   * silently dropped from the quorum, so the round no longer collapses to
+   * `RATING_COLLAPSE_MS` out from under someone still genuinely present.
+   * `eligible.length === 0` still short-circuits exactly as before (no
+   * currently-connected non-author rater exists at all, e.g. everyone else
+   * has been disconnected for a while) — `eligibleRaters()` itself is left on
+   * its raw `connected` definition since it also feeds `eligibleAtClose` and
+   * the player-facing snapshot (`ratingStep.eligibleCount`), which must both
+   * reflect who is truly connected right now, not who is still within a
+   * grace window. Reuses `collapseDeadline`, the single chokepoint through
+   * which any live deadline may ever be shortened, so "never extends" holds
+   * here for free.
    */
   private maybeCollapseRating(): void {
     const authorId = this.rotation[this.stepIndex];
     const eligible = eligibleRaters(this.players, authorId);
+    if (eligible.length === 0) return;
+
     const stepRatings = this.ratings.get(this.stepIndex);
-    const allRated = eligible.length > 0 && eligible.every((id) => stepRatings?.has(id));
-    if (allRated) {
+    const stillPending = [...this.players.keys()].some(
+      (id) => id !== authorId && !stepRatings?.has(id) && this.isPendingForQuorum(id),
+    );
+    if (!stillPending) {
       this.collapseDeadline(RATING_COLLAPSE_MS, () => this.closeRatingStep());
     }
   }
@@ -825,12 +908,28 @@ export class Room {
    * phase or, after the last round, game end. Computed entirely from the
    * room's own state (`roundIndex`, `settings.rounds`) — no client input
    * names the next phase, matching `transferHost()`'s no-arguments rule.
+   *
+   * `discarded` (Phase 6, LIVE-04/D-01) — when `true` (a host-initiated
+   * skip), the round's not-yet-applied score is simply never computed:
+   * `applyRoundScores`/`updateBestOfNight` are skipped entirely rather than
+   * called with a partial value, and any already-cast-but-unclosed rating
+   * bookkeeping is cleared so it can never later be mistaken for a real
+   * round. When `false`, behaves exactly as the original `enterRoundEnd()`
+   * always did.
    */
-  private enterRoundEnd(): void {
-    this.applyRoundScores();
-    this.updateBestOfNight();
+  private finishRound(discarded: boolean): void {
+    if (discarded) {
+      this.rotation = [];
+      this.ratings.clear();
+      this.eligibleAtClose.clear();
+    } else {
+      this.applyRoundScores();
+      this.updateBestOfNight();
+    }
+    this.roundEndSkippedByHost = discarded;
     this.phase = "ROUND_END";
     this.schedulePhase(Date.now() + BETWEEN_PHASES_MS, () => {
+      this.roundEndSkippedByHost = false;
       if (this.roundIndex < this.settings.rounds) {
         this.roundIndex++;
         this.enterWriting();
@@ -838,6 +937,151 @@ export class Room {
         this.enterGameEnd();
       }
     });
+  }
+
+  /** Thin wrapper preserving the original name/call sites (`closeRatingStep`,
+   * `closeWriting`'s D-09 skip branch) — a round that finished normally. */
+  private enterRoundEnd(): void {
+    this.finishRound(false);
+  }
+
+  /**
+   * `skipRound` — host-only "break-glass" recovery action (LIVE-04):
+   * discards the current round entirely — no score from it, regardless of
+   * how many captions or
+   * ratings had already come in — and moves straight to ROUND_END exactly as
+   * a normally-finished round would, then on to the next round or GAME_END
+   * on the usual schedule. Refused with `NOT_HOST` first (identity before
+   * anything else, matching `changeSetting`/`startGame`'s own order), then
+   * `WRONG_PHASE` for any phase outside the three live in-round phases —
+   * this also refuses a round that has already reached ROUND_END or GAME_END
+   * on its own (a race between the round's own timer and the host's tap),
+   * so a discarded round can never be double-applied.
+   */
+  skipRound(playerId: string): SkipRoundOutcome {
+    if (playerId !== this.hostId) {
+      return { ok: false, error: "NOT_HOST" };
+    }
+    if (this.phase !== "WRITING" && this.phase !== "REVEAL_BREAK" && this.phase !== "RATING") {
+      return { ok: false, error: "WRONG_PHASE" };
+    }
+
+    this.finishRound(true);
+    return { ok: true };
+  }
+
+  /**
+   * Host-only "break-glass" recovery action (LIVE-05): forces a real,
+   * currently-present, non-self target out of live play by reusing `detach`
+   * verbatim (D-02) — the same machinery a natural disconnect already goes
+   * through, never a new "banned" concept. Refused with `NOT_HOST` first.
+   * `targetPlayerId` is untrusted client input (T-06-02): only when it is a
+   * string, is not the acting host's own id, and names a player still
+   * present in `this.players` does `detach()` run at all — a forged, stale,
+   * or self-targeted id is a safe no-op that never touches
+   * `photoAssignments`/`ratings`/`submissions` (`detach()` itself only ever
+   * mutates `connected`/fade-timer/host-transfer bookkeeping, so there is
+   * nothing here to corrupt). Always returns `{ ok: true }` once past the
+   * host check, regardless of whether the inner condition matched — a bad or
+   * repeated target is indistinguishable from "already handled" and never
+   * surfaces as an error (D-02/LIVE-05's idempotency and concurrency edges).
+   */
+  removePlayer(playerId: string, targetPlayerId: unknown): RemovePlayerOutcome {
+    if (playerId !== this.hostId) {
+      return { ok: false, error: "NOT_HOST" };
+    }
+
+    if (
+      typeof targetPlayerId === "string" &&
+      targetPlayerId !== playerId &&
+      this.players.has(targetPlayerId)
+    ) {
+      this.detach(targetPlayerId);
+    }
+
+    return { ok: true };
+  }
+
+  /**
+   * Host-only "break-glass" recovery action (LIVE-06): ends the game
+   * immediately, jumping straight to the exact same GAME_END screen a
+   * normal finish produces (D-03 — `enterGameEnd()`/`buildGameEndView()` are
+   * completely unmodified by this plan, reused verbatim). Refused with
+   * `NOT_HOST` first; then `WRONG_PHASE` at LOBBY (nothing has started yet)
+   * or GAME_END (already ended) — ending a game that isn't live is
+   * meaningless. If a round is currently in progress (WRITING,
+   * REVEAL_BREAK, or RATING), that interrupted round's not-yet-applied
+   * score is discarded exactly like `skipRound` does (D-01) — a round
+   * already fully resolved into ROUND_END needs no discard, since
+   * `finishRound(false)` already ran `applyRoundScores`/`updateBestOfNight`
+   * for it; ending from ROUND_END simply jumps to GAME_END with that
+   * round's score standing exactly as it already does. `enterGameEnd()`
+   * already calls `clearPhaseTimer()` (T-06-03) — no orphaned timer can
+   * survive past GAME_END regardless of which live phase this was called
+   * from.
+   */
+  endGame(playerId: string): EndGameOutcome {
+    if (playerId !== this.hostId) {
+      return { ok: false, error: "NOT_HOST" };
+    }
+    if (this.phase === "LOBBY" || this.phase === "GAME_END") {
+      return { ok: false, error: "WRONG_PHASE" };
+    }
+
+    if (this.phase === "WRITING" || this.phase === "REVEAL_BREAK" || this.phase === "RATING") {
+      this.rotation = [];
+      this.ratings.clear();
+      this.eligibleAtClose.clear();
+    }
+
+    this.enterGameEnd();
+    return { ok: true };
+  }
+
+  /**
+   * Host-only "break-glass" recovery action (LIVE-07): starts a fresh game
+   * with the exact same room code, hostId, and roster — no rejoin needed,
+   * including a player who disconnected during the previous game and never
+   * reconnected (D-04). Refused only with `NOT_HOST`; legal from any phase,
+   * including LOBBY itself as a harmless no-op reset of scores that are
+   * already 0. Resets every round- and game-scoped field back to its
+   * pre-game state and returns every current player's score to exactly 0 —
+   * this loop and `applyRoundScores` are now the ONLY two places in the
+   * entire codebase that ever assign to `Player.score` (T-06-04), and this
+   * is the only one that ever assigns anything other than an accumulated
+   * sum; it never reads a client-supplied number. `this.hostId` and every
+   * `Player` record itself (id/name/token/joinedAt/connected) are left
+   * completely untouched. Clearing `photosSeenByPlayer` gives the fresh game
+   * its own complete no-repeat photo pool rather than inheriting the
+   * previous game's exhausted one (D-04's "each game is a discrete,
+   * independent contest").
+   */
+  restartGame(playerId: string): RestartGameOutcome {
+    if (playerId !== this.hostId) {
+      return { ok: false, error: "NOT_HOST" };
+    }
+
+    this.clearPhaseTimer();
+    this.deadlineAt = null;
+    this.phase = "LOBBY";
+    this.roundIndex = 0;
+    this.settingsLocked = false;
+    this.submissions.clear();
+    this.rotation = [];
+    this.stepIndex = -1;
+    this.ratings.clear();
+    this.eligibleAtClose.clear();
+    this.photoAssignments.clear();
+    this.bestOfNight = [];
+    this.photosSeenByPlayer.clear();
+    this.swapUsed.clear();
+    this.roundEndSkippedByHost = false;
+
+    for (const player of this.players.values()) {
+      player.score = 0;
+    }
+
+    return { ok: true };
   }
 
   /** Terminal: no timer, nothing further scheduled, no deadline. */
@@ -876,7 +1120,7 @@ export class Room {
         score: values.reduce((sum, value) => sum + value, 0),
       };
     });
-    return { entries };
+    return { entries, skippedByHost: this.roundEndSkippedByHost };
   }
 
   /**

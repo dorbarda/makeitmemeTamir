@@ -105,9 +105,11 @@ describe("real content — real photos, real tier-name ratings, real scores (ROU
       expect(bAfterStart.yourPhotoUrl).toMatch(/^\/tamir-photos\//);
       expect(hostAfterStart.yourPhotoUrl).not.toBe(bAfterStart.yourPhotoUrl);
       expect(PHOTO_FILENAMES).toContain(
-        hostAfterStart.yourPhotoUrl!.replace("/tamir-photos/", ""),
+        decodeURIComponent(hostAfterStart.yourPhotoUrl!.replace("/tamir-photos/", "")),
       );
-      expect(PHOTO_FILENAMES).toContain(bAfterStart.yourPhotoUrl!.replace("/tamir-photos/", ""));
+      expect(PHOTO_FILENAMES).toContain(
+        decodeURIComponent(bAfterStart.yourPhotoUrl!.replace("/tamir-photos/", "")),
+      );
 
       // Host and b submit captions; c deliberately never submits (mirrors the
       // established two-of-three pattern that already clears

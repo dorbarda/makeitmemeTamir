@@ -42,6 +42,23 @@ export const DEAD_SOCKET_WINDOW_MS = PING_INTERVAL_MS + PING_TIMEOUT_MS; // 18s
 export const ROSTER_FADE_GRACE_MS = DEAD_SOCKET_WINDOW_MS + 12_000; // 30s
 export const HOST_TRANSFER_GRACE_MS = ROSTER_FADE_GRACE_MS * 2; // 60s
 
+// Bug fix (writing-phase-ends-early, live 3-player test): a real phone's
+// `disconnect` fires the instant its screen locks or its tab is backgrounded
+// — the transport actually closes, well before Socket.IO's own ping/pong
+// timeout (DEAD_SOCKET_WINDOW_MS) would ever have concluded the same thing
+// for a merely silent connection. `maybeCollapseWriting`/`maybeCollapseRating`
+// used to treat that instant flag flip as "gone for good" and stop counting
+// that player toward the "is everyone done" quorum, so on a live test the
+// moment ANY player set their phone down between rounds, the other players
+// finishing normally collapsed the phase in a few seconds regardless of
+// whether the backgrounded player was still mid-caption/mid-rating. Giving a
+// freshly-disconnected player this same DEAD_SOCKET_WINDOW_MS worth of
+// benefit of the doubt before counting them out of the quorum makes a screen
+// lock and a silent hang treated identically, and LIVE-03 still holds for
+// anyone who really has left: past this window with no reconnect, they stop
+// blocking the collapse exactly as before.
+export const DISCONNECT_QUORUM_GRACE_MS = DEAD_SOCKET_WINDOW_MS;
+
 // PUBLIC_BASE_URL (optional): when set, this is the authoritative origin
 // used to build every join URL and QR code, regardless of what the
 // connecting socket's own handshake headers report. Phase 7's deployment

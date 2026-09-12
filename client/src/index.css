@@ -9,6 +9,15 @@
      when a field takes focus and the player has to pinch back out mid-game. */
   font-size: 16px;
   line-height: 1.5;
+
+  /* Party palette — original values, not sourced from makeitmeme.com. */
+  --party-gold: #ffc93c;
+  --party-pink: #ff5da2;
+  --party-pink-dark: #c81866;
+  --party-purple: #7c3aed;
+  --party-purple-dark: #3c1361;
+  --party-ink: #1f1147;
+  --party-cream: #fff8ef;
 }
 
 * {
@@ -20,6 +29,25 @@ body {
   min-height: 100vh;
   /* Nothing should ever be reachable only by scrolling sideways. */
   overflow-x: hidden;
+  /* Party sunburst backdrop — a subtle repeating conic "ray" texture over a
+     radial gold-pink-purple gradient. No `background-attachment: fixed`
+     anywhere in this file — unreliable on older iOS Safari, which this
+     project explicitly targets. */
+  background-image: repeating-conic-gradient(
+      from 0deg at 50% -20%,
+      rgba(255, 255, 255, 0.1) 0deg 4deg,
+      transparent 4deg 14deg
+    ),
+    radial-gradient(
+      circle at 50% -10%,
+      var(--party-gold) 0%,
+      var(--party-pink) 40%,
+      var(--party-purple) 75%,
+      var(--party-purple-dark) 100%
+    );
+  background-repeat: no-repeat;
+  background-color: var(--party-purple-dark);
+  color: var(--party-cream);
 }
 
 main {
@@ -36,6 +64,13 @@ h1 {
   margin: 0 0 1.25rem;
   /* Long Hebrew words break rather than push the layout wider than the screen. */
   overflow-wrap: break-word;
+  font-weight: 900;
+  text-shadow: 2px 2px 0 var(--party-purple-dark);
+}
+
+h2 {
+  font-weight: 800;
+  margin: 0 0 0.5rem;
 }
 
 form {
@@ -64,22 +99,31 @@ button {
 }
 
 input {
-  border: 1px solid currentColor;
-  background: transparent;
-  color: inherit;
+  border: 2px solid rgba(31, 17, 71, 0.18);
+  background: var(--party-cream);
+  color: var(--party-ink);
 }
 
 button {
   border: 0;
-  background: #1f6feb;
-  color: #fff;
-  font-weight: 600;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, var(--party-pink) 0%, var(--party-purple) 100%);
+  color: var(--party-cream);
+  font-weight: 800;
   cursor: pointer;
+  box-shadow: 0 4px 0 var(--party-purple-dark), 0 10px 18px rgba(31, 17, 71, 0.35);
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+
+button:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--party-purple-dark), 0 3px 8px rgba(31, 17, 71, 0.3);
 }
 
 button:disabled {
   opacity: 0.5;
   cursor: default;
+  box-shadow: none;
 }
 
 ul {
@@ -93,8 +137,12 @@ ul {
 
 li {
   padding: 0.75rem 0.875rem;
-  border: 1px solid currentColor;
-  border-radius: 0.5rem;
+  border: none;
+  border-radius: 1rem;
+  border-inline-start: 4px solid var(--party-pink);
+  background: var(--party-cream);
+  color: var(--party-ink);
+  box-shadow: 0 3px 10px rgba(31, 17, 71, 0.25);
   overflow-wrap: anywhere;
 }
 
@@ -165,8 +213,12 @@ li {
 .settings-panel {
   margin: 1rem 0;
   padding: 0.875rem 1rem;
-  border: 1px solid currentColor;
-  border-radius: 0.5rem;
+  border: none;
+  border-inline-start: 4px solid var(--party-pink);
+  border-radius: 1rem;
+  background: var(--party-cream);
+  color: var(--party-ink);
+  box-shadow: 0 3px 10px rgba(31, 17, 71, 0.25);
 }
 
 .settings-preset-row {
@@ -181,17 +233,18 @@ li {
   min-width: 3.5rem;
   min-height: 2.75rem;
   padding: 0.5rem 0.875rem;
-  border-radius: 0.5rem;
-  border: 1px solid currentColor;
-  background: transparent;
-  color: inherit;
+  border-radius: 1rem;
+  border: 2px solid var(--party-purple);
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--party-ink);
   font-weight: 600;
 }
 
 .settings-preset--selected {
-  background: #1f6feb;
-  border-color: #1f6feb;
-  color: #fff;
+  background: linear-gradient(135deg, var(--party-pink), var(--party-purple));
+  border-color: transparent;
+  color: var(--party-cream);
+  box-shadow: 0 3px 0 var(--party-purple-dark);
 }
 
 /* D-13/D-14 — the writing phase panel. Mobile-first, no fixed widths; the
@@ -232,9 +285,10 @@ li {
    and is never tapped by mistake, while still inheriting the global
    button rule's 44px tap-target floor. */
 .swap-photo-button {
-  background: transparent;
-  border: 1px solid currentColor;
-  color: inherit;
+  background: rgba(255, 255, 255, 0.85);
+  border: 2px solid var(--party-purple);
+  border-radius: 1rem;
+  color: var(--party-ink);
   margin: 0 0 0.75rem;
 }
 
@@ -261,10 +315,11 @@ li {
   min-width: 3.5rem;
   min-height: 2.75rem;
   padding: 0.5rem 0.875rem;
-  border-radius: 0.5rem;
-  border: 1px solid currentColor;
-  background: transparent;
-  color: inherit;
+  border-radius: 1rem;
+  border: none;
+  background: linear-gradient(135deg, var(--party-pink), var(--party-purple));
+  color: var(--party-cream);
+  box-shadow: 0 3px 0 var(--party-purple-dark);
   font-weight: 700;
   font-size: 1.25rem;
 }
@@ -304,7 +359,65 @@ li {
   max-width: 24rem;
   height: auto;
   margin: 0 auto 0.75rem;
-  border-radius: 0.5rem;
+  border-radius: 1rem;
+}
+
+/* The live canvas compositor in WritingPanel — same relative sizing as
+   .meme-photo so the canvas and the downstream <img> read as the same
+   visual element on every screen. `touch-action: none` (plan 05-03) is
+   CRITICAL — without it, a touch-drag on a real phone fights the browser's
+   own scroll gesture instead of moving the caption box. */
+.meme-canvas {
+  display: block;
+  width: 100%;
+  max-width: 24rem;
+  height: auto;
+  margin: 0 auto 0.75rem;
+  border-radius: 1rem;
+  touch-action: none;
+}
+
+/* plan 05-03 — the one-line instruction above the drag editor's canvas. */
+.meme-editor-instructions {
+  font-size: 0.875rem;
+  opacity: 0.75;
+  margin: 0 0 0.5rem;
+}
+
+/* plan 05-03 — one row per caption box: text input + grapheme counter +
+   optional remove button, laid out as a row (not label's stacked column
+   pattern) since each element here is small enough to fit one line. */
+.caption-box-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.5rem;
+}
+
+/* plan 05-03 — the per-box remove button. Outlined secondary style, same
+   convention as .swap-photo-button, sized down since it only needs to hold
+   a short label next to the row's input. */
+.caption-box-remove {
+  width: auto;
+  min-width: 2.75rem;
+  background: rgba(255, 255, 255, 0.85);
+  border: 2px solid var(--party-purple);
+  border-radius: 1rem;
+  color: var(--party-ink);
+}
+
+/* plan 260910-9ks — the "add another caption box" affordance. Dashed border
+   and translucent background so it reads as a distinct "add another" action,
+   never mistaken for the primary send button or the outlined remove button.
+   Inherits width/min-height/border-radius/font/cursor from the global
+   `button` rule. No letter-spacing on the Hebrew label, per project
+   convention. */
+.caption-box-add {
+  background: rgba(255, 255, 255, 0.15);
+  border: 2px dashed var(--party-cream);
+  color: var(--party-cream);
+  box-shadow: none;
+  margin: 0 0 0.75rem;
 }
 
 /* D-03 — the between-rounds scoreboard. Mobile-first, no fixed widths, same
@@ -326,8 +439,12 @@ li {
   display: flex;
   justify-content: space-between;
   padding: 0.75rem 0.875rem;
-  border: 1px solid currentColor;
-  border-radius: 0.5rem;
+  border: none;
+  border-inline-start: 4px solid var(--party-pink);
+  border-radius: 1rem;
+  background: var(--party-cream);
+  color: var(--party-ink);
+  box-shadow: 0 3px 10px rgba(31, 17, 71, 0.25);
   overflow-wrap: anywhere;
   font-weight: 600;
 }
@@ -344,8 +461,12 @@ li {
 .winner-banner {
   margin: 0 0 1.25rem;
   padding: 0.875rem 1rem;
-  border: 2px solid #1f6feb;
-  border-radius: 0.5rem;
+  border: none;
+  border-inline-start: 4px solid var(--party-pink);
+  border-radius: 1rem;
+  background: var(--party-cream);
+  color: var(--party-ink);
+  box-shadow: 0 3px 10px rgba(31, 17, 71, 0.25);
 }
 
 .winner-list {
@@ -374,5 +495,147 @@ li {
 .best-of-meta {
   font-weight: 600;
   word-spacing: 0.1em;
+}
+
+/* plan 05-04 — MEME-03/D-03 save/share button. Outlined secondary style,
+   same convention as .swap-photo-button/.caption-box-remove — never reads
+   as the primary action on either RatingPanel or GameEndPanel. */
+.save-share-button {
+  background: rgba(255, 255, 255, 0.85);
+  border: 2px solid var(--party-purple);
+  border-radius: 1rem;
+  color: var(--party-ink);
+  margin: 0.5rem 0 0;
+}
+
+/* plan 05-04 — the full-screen long-press-to-save fallback modal shown when
+   navigator.share/canShare is unsupported. */
+.save-meme-fallback {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: rgba(0, 0, 0, 0.9);
+  color: #fff;
+}
+
+.save-meme-fallback img {
+  max-width: 100%;
+  max-height: 70vh;
+  border-radius: 0.5rem;
+}
+
+/* plan 06-02 — the host-only "break glass" recovery panel (LIVE-04..07).
+   Same bordered-box shape as .settings-panel, kept as its own class so this
+   file never has to import a Lobby-specific class name. */
+.host-controls-panel {
+  margin: 1rem 0;
+  padding: 0.875rem 1rem;
+  border: none;
+  border-inline-start: 4px solid var(--party-pink);
+  border-radius: 1rem;
+  background: var(--party-cream);
+  color: var(--party-ink);
+  box-shadow: 0 3px 10px rgba(31, 17, 71, 0.25);
+}
+
+.host-controls-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+}
+
+/* Outlined secondary, matching .settings-preset's shape — all four
+   "break-glass" buttons are supplementary, never the primary filled style. */
+.host-controls-button {
+  flex: 1 1 45%;
+  min-width: 3.5rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 1rem;
+  border: 2px solid var(--party-purple);
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--party-ink);
+  font-weight: 600;
+}
+
+/* Between .reconnect-overlay's z-index:10 and .save-meme-fallback's
+   z-index:20 — this app never shows both a host modal and the save/share
+   fallback at once, but the ordering keeps a host modal above the passive
+   reconnect banner if both were ever visible. */
+.host-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+/* Same dark-surface convention .reconnect-overlay already uses. */
+.host-modal {
+  background: #1f2937;
+  color: #fff;
+  padding: 1.25rem;
+  border-radius: 0.5rem;
+  max-width: 24rem;
+  width: 100%;
+  text-align: center;
+}
+
+.host-modal-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1rem 0 0;
+}
+
+/* Home (landing/join), Lobby, and the end-game (GAME_END) screens reuse the
+   relocated hero photo as a full-bleed background, scrimmed dark at the
+   bottom for legible light text over it. No `background-attachment: fixed`
+   (same older-iOS-Safari reliability reason as `body` above); `top center`
+   position so the subject's face isn't cropped out on a tall narrow phone
+   viewport against this square-ish source image. */
+.hero-bg {
+  background-image: linear-gradient(
+      180deg,
+      rgba(60, 19, 97, 0.25) 0%,
+      rgba(60, 19, 97, 0.55) 45%,
+      rgba(31, 17, 71, 0.92) 100%
+    ), url("/branding/hero-groom.jpeg");
+  background-size: cover;
+  background-position: top center;
+  background-repeat: no-repeat;
+  min-height: 100vh;
+  color: var(--party-cream);
+}
+
+/* plan 260910-9ks — the Lobby-only DVD-screensaver-style bouncing hero
+   photo (BouncingLogo.tsx). `position: fixed` bounces it off the real
+   viewport edges (matching the component's window.innerWidth/innerHeight
+   math) regardless of Lobby's own scroll height. `pointer-events: none` is
+   CRITICAL — without it the logo could sit over a button or roster entry
+   and swallow taps. `z-index: 1` keeps it below .reconnect-overlay
+   (z-index: 10) and the other fixed overlays in this file. */
+.bouncing-logo {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 4rem;
+  height: 4rem;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid var(--party-cream);
+  box-shadow: 0 3px 10px rgba(31, 17, 71, 0.35);
+  pointer-events: none;
+  z-index: 1;
+  will-change: transform;
 }
 

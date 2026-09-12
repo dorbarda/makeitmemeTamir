@@ -101,7 +101,7 @@ describe("no-repeat photos across more rounds than photos, and photo swap edge c
     expect(result.ok).toBe(true);
     if (!result.ok) return;
 
-    const swappedFilename = result.photoUrl.replace("/tamir-photos/", "");
+    const swappedFilename = decodeURIComponent(result.photoUrl.replace("/tamir-photos/", ""));
     // Excludes both the player's current photo and, wherever the real pool
     // allows it (it does here — only one photo has been seen so far, and
     // the real pool has more than one), every other previously-seen photo.
