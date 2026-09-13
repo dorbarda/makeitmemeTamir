@@ -3,7 +3,12 @@ import { createServer as createHttpServer } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Server as SocketIOServer } from "socket.io";
-import { PING_INTERVAL_MS, PING_TIMEOUT_MS, SOCKET_MAX_BUFFER_BYTES } from "./config.js";
+import {
+  PING_INTERVAL_MS,
+  PING_TIMEOUT_MS,
+  ROOM_REAP_INTERVAL_MS,
+  SOCKET_MAX_BUFFER_BYTES,
+} from "./config.js";
 import { RoomManager } from "./rooms/RoomManager.js";
 import { SessionRegistry } from "./players/SessionRegistry.js";
 import { createAuthMiddleware } from "./socket/authMiddleware.js";
@@ -57,6 +62,15 @@ export function createServer() {
   io.on("connection", (socket) => {
     registerHandlers(io, socket, { roomManager, sessions });
   });
+
+  // debug/render-oom-memory-leak: without this, no room was ever removed
+  // from RoomManager — see RoomManager.reapIdleRooms() for the TTL rules.
+  // `.unref()` so this background hygiene timer never holds the process (or
+  // a test's httpServer) open on its own.
+  const roomReaperInterval = setInterval(() => {
+    roomManager.reapIdleRooms();
+  }, ROOM_REAP_INTERVAL_MS);
+  roomReaperInterval.unref();
 
   return { httpServer, io, roomManager };
 }

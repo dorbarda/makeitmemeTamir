@@ -98,3 +98,28 @@ export const MEME_MAX_BASE64_CHARS = 2_800_000; // ~2MB decoded
 // Socket.IO safety margin above MEME_MAX_BASE64_CHARS (RESEARCH.md's
 // recommended value).
 export const SOCKET_MAX_BUFFER_BYTES = 5_000_000; // 5MB
+
+// debug/render-oom-memory-leak: RoomManager never removed a room once
+// created (Room.dispose() existed but nothing ever called it). Because
+// Room.startGame() only works from LOBBY and GAME_END is terminal (no
+// restart path), a multi-hour party playing many separate games back-to-back
+// necessarily spins up a brand-new room per game via createRoom() — and
+// every old room, each still holding its full roster plus up to 3 full
+// base64 meme images in bestOfNight, stayed resident in memory for the rest
+// of the night. These TTLs bound that growth via RoomManager.reapIdleRooms()
+// without cutting off a room still in genuine use.
+//
+// Generous enough that nobody mid-download at GAME_END gets cut off; still
+// short enough that a multi-hour party doesn't accumulate every game ever
+// played. Applies even to a GAME_END room with someone still connected — a
+// safety net against a forgotten-open tab, not a hard cutoff on a real
+// viewer at party pace.
+export const ROOM_GAME_END_TTL_MS = 45 * 60_000; // 45 minutes since last activity
+// A room with zero connected players that never reached GAME_END (abandoned
+// in LOBBY, or everyone left mid-game) — no legitimate reason to stay
+// resident for the rest of the night.
+export const ROOM_ABANDONED_TTL_MS = 20 * 60_000; // 20 minutes with nobody connected
+// How often RoomManager.reapIdleRooms() sweeps — frequent enough that the
+// two TTLs above are meaningful bounds, infrequent enough to be free at this
+// scale.
+export const ROOM_REAP_INTERVAL_MS = 5 * 60_000; // 5 minutes

@@ -93,6 +93,13 @@ export class Room {
   phase: RoomPhase = "LOBBY";
   players = new Map<string, Player>();
   hostId: string | null = null;
+  /** Last time this room's state changed and was broadcast — the idle
+   * signal `RoomManager.reapIdleRooms()` reads (debug/render-oom-memory-leak).
+   * Set at construction and refreshed on every `broadcast()` call, which
+   * fires after essentially every mutating socket event and after every
+   * delayed internal timer (fade, host transfer, phase advance) — see
+   * `onStateChanged`. */
+  lastActivityAt: number = Date.now();
 
   /** D-01/D-02 — seeded from the three DEFAULT_* constants, host-adjustable
    * pre-game via `change-settings` (plan 02-02), locked the moment the game
@@ -180,6 +187,16 @@ export class Room {
 
   get isFull(): boolean {
     return this.players.size >= ROOM_CAPACITY;
+  }
+
+  /** True if at least one player currently has a live connection — the
+   * `RoomManager.reapIdleRooms()` signal for whether a room might still have
+   * someone actively looking at its screen (debug/render-oom-memory-leak). */
+  get hasConnectedPlayers(): boolean {
+    for (const player of this.players.values()) {
+      if (player.connected) return true;
+    }
+    return false;
   }
 
   /**
@@ -1018,6 +1035,7 @@ export class Room {
    * directly rather than the adapter, so no `fetchSockets()` round trip is needed.
    */
   broadcast(io: Server): void {
+    this.lastActivityAt = Date.now();
     for (const socket of io.sockets.sockets.values()) {
       const playerId = socket.data?.playerId as string | undefined;
       if (playerId && socket.rooms.has(this.code) && this.players.has(playerId)) {
